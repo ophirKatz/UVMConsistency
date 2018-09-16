@@ -60,10 +60,10 @@ public:
 
   ManagerBankAccount() : balance(0), account_id(0) {}
 
-  void *operator new() {
+  void *operator new(size_t len) {
     void *ptr;
-    size_t len = sizeof(ManagerBankAccounts);
-    CUDA_CHECK(cudaMallocManaged(&ptr, len));
+    size_t account_size = sizeof(ManagerBankAccount);
+    CUDA_CHECK(cudaMallocManaged(&ptr, len * account_size));
     CUDA_CHECK(cudaDeviceSynchronize());
     return ptr;
   }
@@ -73,7 +73,6 @@ public:
     CUDA_CHECK(cudaFree(ptr));
   }
 
-private:
   unsigned long balance;
   unsigned long account_id;
 };
@@ -98,7 +97,8 @@ __device__ void deposit_to_account(UVMSPACE ManagerBankAccount *bank_account, un
 __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, unsigned long deposit_amount,
                             volatile int *finished, UVMSPACE OUT int *status) {
   UVMSPACE ManagerBankAccount *account = (ManagerBankAccount *) bank_ptr;
-  for (int account_index = 0; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
+  int account_index = 0;
+  for (; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
     if (account->account_id == account_id) {
       break;
     }
@@ -122,27 +122,47 @@ public:
     }
 
     CUDA_CHECK(cudaMallocManaged(&finished, sizeof(int)));
-    memset(finished, 0, sizeof(int));
+    memset((void *) finished, 0, sizeof(int));
 
     __sync_synchronize();
   }
 
+  ~ManagedBank() {
+    __sync_synchronize();
+    CUDA_CHECK(cudaFree((void *) finished));
+    delete[] accounts;
+    CUDA_CHECK(cudaFree((void *) accounts));
+  }
+
   bool deposit(unsigned long account_id, unsigned long deposit_amount) {
     UVMSPACE int *action_status;
-    CUDA_CHECK(cudaMallocManaged(&action_status, sideof(int)));
+    CUDA_CHECK(cudaMallocManaged(&action_status, sizeof(int)));
 
     // Call the kernel that uses the unified memory mapped page
     bank_deposit<<<1,1>>>(accounts, account_id, deposit_amount, finished, action_status);
+
+    return true;
   }
 
-   long check_balance(unsigned long account_id) {
-    UVMSPACE ManagerBankAccount *account = (ManagerBankAccount *) bank_ptr;
+  long check_balance(unsigned long account_id) {
+    UVMSPACE ManagerBankAccount *account = (ManagerBankAccount *) accounts;
     for (int account_index = 0; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
       if (account->account_id == account_id) {
         return account->balance;
       }
     }
     return -1;
+  }
+
+  void print() {
+    cout << "******  UVM Manager Bank  ******" << endl
+         << "\tAccounts : " << endl;
+    cout << "\t" << "Account id   |   Account balance" << endl;
+    UVMSPACE ManagerBankAccount *account = (ManagerBankAccount *) accounts;
+    for (int i = 0; i < NUM_BANK_ACCOUNTS; i++, account++) {
+      cout << "\t" << "      " << i << "      |      " << account->balance << endl;
+    }
+    cout << endl;
   }
 
 private:
@@ -156,11 +176,23 @@ private:
 */
 
 class UVMConsistency {
-  static void strong_consistency() {
-
-  }
-
+public:
   static void strong_consistency_broken() {
-    
+    ManagedBank bank;
+    bank.print();
+    unsigned long account_id = 0;
+    unsigned long balance = bank.check_balance(account_id);
+    bank.deposit(0, 1000);
+    bank.print();
+    unsigned long new_balance = balance + 1000;
+    if (bank.check_balance(account_id) != new_balance) {
+      cout << "Error!" << endl;
+    }
   }
+
 };
+
+int main() {
+  UVMConsistency::strong_consistency_broken();
+  return 0;
+}
