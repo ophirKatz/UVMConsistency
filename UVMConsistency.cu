@@ -103,7 +103,8 @@ __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, 
   UVMSPACE ManagedBankAccount *account = (ManagedBankAccount *) bank_ptr;
   int account_index = 0;
   for (; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
-    if (account->account_id == account_id) {
+    UVMSPACE unsigned long id = account->account_id;
+    if (id == account_id) {
       break;
     }
   }
@@ -136,7 +137,7 @@ public:
   ~ManagedBank() {
     cout << endl << "Destroying Bank" << endl;
     __sync_synchronize();
-    CUDA_CHECK(cudaDeviceSynchronize());
+    // CUDA_CHECK(cudaDeviceSynchronize());
     cout << "Freeing <accounts>" << endl;
     delete[] accounts;  // this works
     cout << "Freeing <finished>" << endl;
