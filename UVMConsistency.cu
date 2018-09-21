@@ -134,8 +134,9 @@ public:
   ~ManagedBank() {
     cout << endl << "Destroying Bank" << endl;
     __sync_synchronize();
+    CUDA_CHECK(cudaDeviceSynchronize());
     cout << "Freeing <accounts>" << endl;
-    delete[] accounts;
+    delete[] accounts;  // this works
     cout << "Freeing <finished>" << endl;
     CUDA_CHECK(cudaFree((void *) finished));
   }
