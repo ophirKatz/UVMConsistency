@@ -1,6 +1,6 @@
 /************************************************************
  *                                                          *
- *  This program's goal is to prove that CUDA's             *
+ *  This program's goal is to proof that CUDA's             *
  *  UVM consistency model is strong only when local         *
  *  thread memory is flushed before handling page-          *
  *  fault in CPU. And it shows that when this condition     *
@@ -47,15 +47,16 @@ using namespace std;
 
 #define NUM_BANK_ACCOUNTS 1
 
+typedef unsigned long long int ulli;
 
 class ManagerBankAccount {
 public:
 
   static void initialize_account(UVMSPACE ManagerBankAccount *account,
                                 unsigned long balance, unsigned long id) {
-    // TODO : Add flushes? syncs?
     account->balance = balance;
     account->account_id = id;
+    __sync_synchronize();
   }
 
   ManagerBankAccount() : balance(0), account_id(0) {}
@@ -87,7 +88,7 @@ __device__ void deposit_to_account(UVMSPACE ManagerBankAccount *bank_account, un
                                   volatile int *finished) {
   // FIXME : Needs to be wrapped with flushes
   ONLY_THREAD {
-    bank_account->balance += deposit_amount;
+    atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
     *finished = THREAD_FINISH;
   }
   // Wait for CPU to release
@@ -128,6 +129,7 @@ public:
   }
 
   ~ManagedBank() {
+    cout << endl << "Destroying Bank" << endl;
     __sync_synchronize();
     CUDA_CHECK(cudaFree((void *) finished));
     delete[] accounts;
@@ -145,13 +147,20 @@ public:
   }
 
   long check_balance(unsigned long account_id) {
+    long balance = -1;
     UVMSPACE ManagerBankAccount *account = (ManagerBankAccount *) accounts;
+    cout << __LINE__ << endl;
     for (int account_index = 0; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
+      cout << __LINE__ << endl;
       if (account->account_id == account_id) {
-        return account->balance;
+        balance = account->balance;
+        break;
       }
     }
-    return -1;
+    cout << __LINE__ << endl;
+    *finished = CPU_FINISH; // check_balance means the CPU has its answer
+    cout << __LINE__ << endl;
+    return balance;
   }
 
   void print() {
@@ -185,11 +194,11 @@ public:
     bank.deposit(0, 1000);
     bank.print();
     unsigned long new_balance = balance + 1000;
+    cout << endl << "Destroying Bank" << endl;
     if (bank.check_balance(account_id) != new_balance) {
       cout << "Error!" << endl;
     }
   }
-
 };
 
 int main() {
