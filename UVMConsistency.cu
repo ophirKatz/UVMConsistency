@@ -41,6 +41,7 @@ using namespace std;
 #define ONLY_THREAD if (threadIdx.x == 0)
 
 #define UVMSPACE      volatile
+#define STARTING      0
 #define THREAD_FINISH 1
 #define CPU_FINISH    2
 #define OUT
@@ -131,9 +132,10 @@ public:
   ~ManagedBank() {
     cout << endl << "Destroying Bank" << endl;
     __sync_synchronize();
+    cout << "Freeing <finished>" << endl;
     CUDA_CHECK(cudaFree((void *) finished));
+    cout << "Freeing <accounts>" << endl;
     delete[] accounts;
-    CUDA_CHECK(cudaFree((void *) accounts));
   }
 
   bool deposit(unsigned long account_id, unsigned long deposit_amount) {
@@ -141,6 +143,7 @@ public:
     CUDA_CHECK(cudaMallocManaged(&action_status, sizeof(int)));
 
     // Call the kernel that uses the unified memory mapped page
+    *finished = STARTING;
     bank_deposit<<<1,1>>>(accounts, account_id, deposit_amount, finished, action_status);
 
     return true;
@@ -149,6 +152,9 @@ public:
   long check_balance(unsigned long account_id) {
     long balance = -1;
     UVMSPACE ManagerBankAccount *account = (ManagerBankAccount *) accounts;
+
+    while (*finished == STARTING);
+
     cout << __LINE__ << endl;
     for (int account_index = 0; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
       cout << __LINE__ << endl;
