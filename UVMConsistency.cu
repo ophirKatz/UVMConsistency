@@ -51,21 +51,21 @@ using namespace std;
 
 typedef unsigned long long int ulli;
 
-class ManagerBankAccount {
+class ManagedBankAccount {
 public:
 
-  static void initialize_account(UVMSPACE ManagerBankAccount *account,
+  static void initialize_account(UVMSPACE ManagedBankAccount *account,
                                 unsigned long balance, unsigned long id) {
     account->balance = balance;
     account->account_id = id;
     __sync_synchronize();
   }
 
-  ManagerBankAccount() : balance(0), account_id(0) {}
+  ManagedBankAccount() : balance(0), account_id(0) {}
 
   void *operator new(size_t len) {
     void *ptr;
-    size_t account_size = sizeof(ManagerBankAccount);
+    size_t account_size = sizeof(ManagedBankAccount);
     CUDA_CHECK(cudaMallocManaged(&ptr, len * account_size));
     CUDA_CHECK(cudaDeviceSynchronize());
     return ptr;
@@ -76,8 +76,8 @@ public:
     CUDA_CHECK(cudaFree(ptr));
   }
 
-  unsigned long balance;
-  unsigned long account_id;
+  UVMSPACE unsigned long balance;
+  UVMSPACE unsigned long account_id;
 };
 
 
@@ -86,7 +86,7 @@ public:
     The kernel that performs the deposit
 */
 
-__device__ void deposit_to_account(UVMSPACE ManagerBankAccount *bank_account, unsigned long deposit_amount,
+__device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, unsigned long deposit_amount,
                                   volatile int *finished) {
   *finished = GPU_START;
   // FIXME : Needs to be wrapped with flushes
@@ -100,7 +100,7 @@ __device__ void deposit_to_account(UVMSPACE ManagerBankAccount *bank_account, un
 
 __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, unsigned long deposit_amount,
                             volatile int *finished, UVMSPACE OUT int *status) {
-  UVMSPACE ManagerBankAccount *account = (ManagerBankAccount *) bank_ptr;
+  UVMSPACE ManagedBankAccount *account = (ManagedBankAccount *) bank_ptr;
   int account_index = 0;
   for (; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
     if (account->account_id == account_id) {
@@ -120,13 +120,15 @@ class ManagedBank {
 public:
 
   ManagedBank() {
-    accounts = new ManagerBankAccount[NUM_BANK_ACCOUNTS];
+    accounts = new ManagedBankAccount[NUM_BANK_ACCOUNTS];
     for (int i = 0; i < NUM_BANK_ACCOUNTS; i++) {
-      ManagerBankAccount::initialize_account(accounts + i, i * 1000, i);
+      ManagedBankAccount::initialize_account(accounts + i, i * 1000, i);
     }
 
     CUDA_CHECK(cudaMallocManaged(&finished, sizeof(int)));
     memset((void *) finished, 0, sizeof(int));
+
+    printf("Address of <finished> is : %p\n", finished);
 
     __sync_synchronize();
   }
@@ -138,7 +140,7 @@ public:
     cout << "Freeing <accounts>" << endl;
     delete[] accounts;  // this works
     cout << "Freeing <finished>" << endl;
-    CUDA_CHECK(cudaFree((void *) finished));
+    CUDA_CHECK(cudaFree((int *) finished));
   }
 
   bool deposit(unsigned long account_id, unsigned long deposit_amount) {
@@ -154,7 +156,7 @@ public:
 
   long check_balance(unsigned long account_id) {
     long balance = -1;
-    UVMSPACE ManagerBankAccount *account = (ManagerBankAccount *) accounts;
+    UVMSPACE ManagedBankAccount *account = (ManagedBankAccount *) accounts;
 
     cout << __LINE__ << endl;
     for (int account_index = 0; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
@@ -174,7 +176,7 @@ public:
     cout << "******  UVM Manager Bank  ******" << endl
          << "\tAccounts : " << endl;
     cout << "\t" << "Account id   |   Account balance" << endl;
-    UVMSPACE ManagerBankAccount *account = (ManagerBankAccount *) accounts;
+    UVMSPACE ManagedBankAccount *account = (ManagedBankAccount *) accounts;
     for (int i = 0; i < NUM_BANK_ACCOUNTS; i++, account++) {
       cout << "\t" << "      " << i << "      |      " << account->balance << endl;
     }
@@ -182,7 +184,7 @@ public:
   }
 
 private:
-  UVMSPACE ManagerBankAccount *accounts;
+  UVMSPACE ManagedBankAccount *accounts;
   volatile int *finished;
 };
 
