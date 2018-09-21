@@ -134,10 +134,10 @@ public:
   ~ManagedBank() {
     cout << endl << "Destroying Bank" << endl;
     __sync_synchronize();
-    cout << "Freeing <finished>" << endl;
-    CUDA_CHECK(cudaFree((void *) finished));
     cout << "Freeing <accounts>" << endl;
     delete[] accounts;
+    cout << "Freeing <finished>" << endl;
+    CUDA_CHECK(cudaFree((void *) finished));
   }
 
   bool deposit(unsigned long account_id, unsigned long deposit_amount) {
