@@ -41,9 +41,10 @@ using namespace std;
 #define ONLY_THREAD if (threadIdx.x == 0)
 
 #define UVMSPACE      volatile
-#define STARTING      0
-#define THREAD_FINISH 1
+#define CPU_START     0
+#define GPU_START     1
 #define CPU_FINISH    2
+#define GPU_FINISH    3
 #define OUT
 
 #define NUM_BANK_ACCOUNTS 1
@@ -87,10 +88,11 @@ public:
 
 __device__ void deposit_to_account(UVMSPACE ManagerBankAccount *bank_account, unsigned long deposit_amount,
                                   volatile int *finished) {
+  *finished = GPU_START;
   // FIXME : Needs to be wrapped with flushes
   ONLY_THREAD {
     atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
-    *finished = THREAD_FINISH;
+    *finished = GPU_FINISH;
   }
   // Wait for CPU to release
   while (*finished != CPU_FINISH);
@@ -143,7 +145,7 @@ public:
     CUDA_CHECK(cudaMallocManaged(&action_status, sizeof(int)));
 
     // Call the kernel that uses the unified memory mapped page
-    *finished = STARTING;
+    *finished = CPU_START;
     bank_deposit<<<1,1>>>(accounts, account_id, deposit_amount, finished, action_status);
 
     return true;
@@ -152,8 +154,6 @@ public:
   long check_balance(unsigned long account_id) {
     long balance = -1;
     UVMSPACE ManagerBankAccount *account = (ManagerBankAccount *) accounts;
-
-    while (*finished == STARTING);
 
     cout << __LINE__ << endl;
     for (int account_index = 0; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
