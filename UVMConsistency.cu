@@ -230,7 +230,7 @@ public:
     bank.print();
     unsigned long account_id = 1;
     unsigned long balance = bank.check_balance(account_id);
-    bank.deposit(0, 1000);
+    bank.deposit(account_id, 1000);
     bank.print();
     unsigned long new_balance = balance + 1000;
     cout << endl << "Destroying Bank" << endl;
