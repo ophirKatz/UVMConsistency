@@ -94,7 +94,7 @@ public:
 
 __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, unsigned long deposit_amount,
                                   volatile int *finished) {
-  assert(*finished == CPU_START);
+  printf("[deposit_to_account] finished variable is %d\n", *finished);
   *finished = GPU_START;
   __threadfence_system();
 
