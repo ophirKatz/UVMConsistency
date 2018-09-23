@@ -145,8 +145,8 @@ public:
   ManagedBank() {
     accounts = new ManagedBankAccount[NUM_BANK_ACCOUNTS];
     for (int i = 0; i < NUM_BANK_ACCOUNTS; i++) {
-      unsigned long balance = i * 1000;
-      unsigned long id = i;
+      unsigned long balance = (i + 1) * 1000;
+      unsigned long id = i + 1;
       ManagedBankAccount::initialize_account(accounts + i, balance, id);
     }
 
