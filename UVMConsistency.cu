@@ -200,7 +200,7 @@ public:
   }
 
   void finish_deposit() {
-    cout << "[in finish_deposit] finished = " << CPU_FINISH << endl;
+    cout << "[in finish_deposit] finished was = " << *finished << " and now = " << CPU_FINISH << endl;
     *finished = CPU_FINISH; // check_balance means the CPU has its result
     __sync_synchronize();
   }
@@ -236,7 +236,6 @@ public:
     bank.deposit(account_id, 1000);
     bank.print();
     unsigned long new_balance = balance + 1000;
-    cout << endl << "Destroying Bank" << endl;
     unsigned long second_balance = bank.check_balance(account_id);
     bank.finish_deposit();
     if (second_balance != new_balance) {
