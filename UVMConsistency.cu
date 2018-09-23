@@ -68,7 +68,9 @@ public:
     __sync_synchronize();
   }
 
-  ManagedBankAccount() : balance(0), account_id(0) {}
+  ManagedBankAccount() : balance(0), account_id(0) {
+    cout << "in constructor" << endl;
+  }
   
   void *operator new(size_t size) {
     return allocate(size);
