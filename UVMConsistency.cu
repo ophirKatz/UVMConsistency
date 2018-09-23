@@ -59,6 +59,11 @@ private:
     CUDA_CHECK(cudaDeviceSynchronize());
     return ptr;
   }
+
+  static void deallocate(void *ptr) {
+    CUDA_CHECK(cudaDeviceSynchronize());
+    CUDA_CHECK(cudaFree(ptr));
+  }
 public:
 
   static void initialize_account(UVMSPACE ManagedBankAccount *account,
@@ -80,8 +85,12 @@ public:
 
   void operator delete(void *ptr) {
     cout << "deleting array" << endl;
-    CUDA_CHECK(cudaDeviceSynchronize());
-    CUDA_CHECK(cudaFree(ptr));
+    deallocate(ptr);
+  }
+
+  void operator delete[](void *ptr) {
+    cout << "deleting[] array" << endl;
+    deallocate(ptr);
   }
 
   UVMSPACE unsigned long balance;
