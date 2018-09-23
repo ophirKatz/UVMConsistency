@@ -165,7 +165,6 @@ public:
   ~ManagedBank() {
     cout << endl << "Destroying Bank" << endl;
     __sync_synchronize();
-    // CUDA_CHECK(cudaDeviceSynchronize());
     cout << "Freeing <accounts>" << endl;
     delete[] accounts;  // this works
     cout << "Freeing <finished>" << endl;
@@ -176,8 +175,10 @@ public:
     UVMSPACE int *action_status;
     CUDA_CHECK(cudaMallocManaged(&action_status, sizeof(int)));
 
-    // Call the kernel that uses the unified memory mapped page
     *finished = CPU_START;
+    __sync_synchronize();
+
+    // Call the kernel that uses the unified memory mapped page
     bank_deposit<<<1,1>>>(accounts, account_id, deposit_amount, finished, action_status);
 
     return true;
@@ -190,12 +191,16 @@ public:
     for (int account_index = 0; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
       if (account->account_id == account_id) {
         balance = account->balance;
+        cout << "[in check_balance] Found account with id " << account_id << endl;
         break;
       }
     }
 
     cout << "[in check_balance] finished = CPU_FINISH" << endl;
     *finished = CPU_FINISH; // check_balance means the CPU has its answer
+    __sync_synchronize();
+    assert(*finished == CPU_FINISH);
+    
     return balance;
   }
 
