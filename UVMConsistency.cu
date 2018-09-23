@@ -41,7 +41,7 @@ using namespace std;
 #define ONLY_THREAD if (threadIdx.x == 0)
 
 #define UVMSPACE      volatile
-#define CPU_START     0
+#define CPU_START     10
 #define GPU_START     1
 #define CPU_FINISH    2
 #define GPU_FINISH    3
@@ -94,6 +94,7 @@ public:
 
 __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, unsigned long deposit_amount,
                                   volatile int *finished) {
+  assert(*finished == CPU_START);
   *finished = GPU_START;
   __threadfence_system();
 
