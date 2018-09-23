@@ -157,7 +157,6 @@ public:
     memset((void *) finished, 0, sizeof(int));
 
     printf("Address of <finished> is : %p\n", finished);
-    
 
     // Writing all the changes of UM to GPU
     __sync_synchronize();
