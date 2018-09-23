@@ -95,12 +95,14 @@ public:
 __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, unsigned long deposit_amount,
                                   volatile int *finished) {
   *finished = GPU_START;
-  // FIXME : Needs to be wrapped with flushes
+  __threadfence_system();
+
   ONLY_THREAD {
     atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
     *finished = GPU_FINISH;
-    __threadfence_system(); // Writing GPU memory so CPU can see
   }
+  __threadfence_system(); // Writing GPU memory so CPU can see
+
   // Wait for CPU to release
   bool printed = false;
   while (*finished != CPU_FINISH) {
