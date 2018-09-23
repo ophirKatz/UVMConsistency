@@ -61,7 +61,7 @@ private:
   }
 
   static void deallocate(void *ptr) {
-    // CUDA_CHECK(cudaDeviceSynchronize());
+    CUDA_CHECK(cudaDeviceSynchronize());
     CUDA_CHECK(cudaFree(ptr));
   }
 public:
@@ -200,7 +200,7 @@ public:
     *finished = CPU_FINISH; // check_balance means the CPU has its answer
     __sync_synchronize();
     assert(*finished == CPU_FINISH);
-    
+
     return balance;
   }
 
