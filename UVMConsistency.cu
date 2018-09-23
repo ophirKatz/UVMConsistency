@@ -99,6 +99,7 @@ __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, un
   ONLY_THREAD {
     atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
     *finished = GPU_FINISH;
+    __threadfence_system(); // Writing GPU memory so CPU can see
   }
   // Wait for CPU to release
   bool printed = false;
@@ -124,9 +125,11 @@ __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, 
   }
   if (account_index >= NUM_BANK_ACCOUNTS) { // Account was not found (error handling...)
     *status = -1;
+    __threadfence_system();
     return;
   }
   *status = 0;
+  __threadfence_system();
   deposit_to_account(account, deposit_amount, finished);
   printf("[bank_deposit] out of deposit_to_account\n");
 }
