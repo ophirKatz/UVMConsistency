@@ -135,6 +135,8 @@ __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, 
   }
   *status = 0;
   __threadfence_system();
+
+  printf("entering deposit_to_account\n");
   deposit_to_account(account, deposit_amount, finished);
   printf("[bank_deposit] out of deposit_to_account\n");
 }
