@@ -61,7 +61,7 @@ private:
   }
 
   static void deallocate(void *ptr) {
-    CUDA_CHECK(cudaDeviceSynchronize());
+    // CUDA_CHECK(cudaDeviceSynchronize());
     CUDA_CHECK(cudaFree(ptr));
   }
 public:
