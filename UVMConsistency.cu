@@ -208,7 +208,7 @@ public:
     cout << "\t" << "Account id   |   Account balance" << endl;
     UVMSPACE ManagedBankAccount *account = (ManagedBankAccount *) accounts;
     for (int i = 0; i < NUM_BANK_ACCOUNTS; i++, account++) {
-      cout << "\t" << "      " << i << "      |      " << account->balance << endl;
+      cout << "\t" << "      " << account->account_id << "      |      " << account->balance << endl;
     }
     cout << endl;
   }
