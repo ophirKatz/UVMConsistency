@@ -52,6 +52,13 @@ using namespace std;
 typedef unsigned long long int ulli;
 
 class ManagedBankAccount {
+private:
+  static void *allocate(size_t size) {
+    void *ptr;
+    CUDA_CHECK(cudaMallocManaged(&ptr, size));
+    CUDA_CHECK(cudaDeviceSynchronize());
+    return ptr;
+  }
 public:
 
   static void initialize_account(UVMSPACE ManagedBankAccount *account,
@@ -62,15 +69,13 @@ public:
   }
 
   ManagedBankAccount() : balance(0), account_id(0) {}
+  
+  void *operator new(size_t size) {
+    return allocate(size);
+  }
 
-  void *operator new(size_t len) {
-    void *ptr;
-    size_t account_size = sizeof(ManagedBankAccount);
-    cout << "Each account size is " << account_size << ". Total allocated is " << len * account_size << endl;
-    CUDA_CHECK(cudaMallocManaged(&ptr, len * account_size));
-    printf("Address bound is [%p , %p]\n", ptr, (void *) ((char *) ptr + len * account_size));
-    CUDA_CHECK(cudaDeviceSynchronize());
-    return ptr;
+  void *operator new[](size_t size) {
+    return allocate(size);
   }
 
   void operator delete(void *ptr) {
