@@ -112,8 +112,12 @@ __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, un
     *finished = GPU_FINISH;
   }
   // Wait for CPU to release
+  bool printed = false;
   while (*finished != CPU_FINISH) {
-    printf("[in deposit_to_account] finished is %d\n", *finished);
+    if (!printed) {
+      printf("[in deposit_to_account] finished is %d\n", *finished);
+      printed = true;
+    }
   }
   
   printf(" --- --- --- Finished kernel --- --- --- \n");
