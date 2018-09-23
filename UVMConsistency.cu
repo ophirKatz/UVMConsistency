@@ -59,11 +59,6 @@ private:
     CUDA_CHECK(cudaDeviceSynchronize());
     return ptr;
   }
-
-  static void deallocate(void *ptr) {
-    CUDA_CHECK(cudaDeviceSynchronize());
-    CUDA_CHECK(cudaFree(ptr));
-  }
 public:
 
   static void initialize_account(UVMSPACE ManagedBankAccount *account,
@@ -83,14 +78,8 @@ public:
     return allocate(size);
   }
 
-  void operator delete(void *ptr) {
-    cout << "deleting array" << endl;
-    deallocate(ptr);
-  }
-
   void operator delete[](void *ptr) {
-    cout << "deleting[] array" << endl;
-    deallocate(ptr);
+    CUDA_CHECK(cudaFree(ptr));
   }
 
   UVMSPACE unsigned long balance;
@@ -126,7 +115,6 @@ __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, un
 __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, unsigned long deposit_amount,
                             volatile int *finished, UVMSPACE OUT int *status) {
   UVMSPACE ManagedBankAccount *account = (ManagedBankAccount *) bank_ptr;
-  printf("account (bank_ptr) is at address : %p\n", bank_ptr);
   int account_index = 0;
   for (; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
     UVMSPACE unsigned long id = account->account_id;
@@ -140,6 +128,7 @@ __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, 
   }
   *status = 0;
   deposit_to_account(account, deposit_amount, finished);
+  printf("[bank_deposit] out of deposit_to_account\n");
 }
 
 
@@ -159,14 +148,15 @@ public:
 
     printf("Address of <finished> is : %p\n", finished);
 
+    // Writing all the changes of UM to GPU
     __sync_synchronize();
   }
 
   ~ManagedBank() {
     cout << endl << "Destroying Bank" << endl;
-    __sync_synchronize();
-    cout << "Freeing <accounts>" << endl;
-    delete[] accounts;  // this works
+    CUDA_CHECK(cudaDeviceSynchronize());  // Waiting for kernel to finish
+    cout << "Freeing <accounts> array" << endl;
+    delete[] accounts;
     cout << "Freeing <finished>" << endl;
     CUDA_CHECK(cudaFree((int *) finished));
   }
@@ -176,7 +166,7 @@ public:
     CUDA_CHECK(cudaMallocManaged(&action_status, sizeof(int)));
 
     *finished = CPU_START;
-    __sync_synchronize();
+    __sync_synchronize(); // Syncing write to UM so kernel thread can see
 
     // Call the kernel that uses the unified memory mapped page
     bank_deposit<<<1,1>>>(accounts, account_id, deposit_amount, finished, action_status);
@@ -197,9 +187,8 @@ public:
     }
 
     cout << "[in check_balance] finished = CPU_FINISH" << endl;
-    *finished = CPU_FINISH; // check_balance means the CPU has its answer
+    *finished = CPU_FINISH; // check_balance means the CPU has its result
     __sync_synchronize();
-    assert(*finished == CPU_FINISH);
 
     return balance;
   }
