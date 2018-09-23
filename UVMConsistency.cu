@@ -68,9 +68,7 @@ public:
     __sync_synchronize();
   }
 
-  ManagedBankAccount() : balance(0), account_id(0) {
-    cout << "in constructor" << endl;
-  }
+  ManagedBankAccount() : balance(0), account_id(0) {}
   
   void *operator new(size_t size) {
     return allocate(size);
@@ -105,6 +103,8 @@ __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, un
   }
   // Wait for CPU to release
   while (*finished != CPU_FINISH);
+  
+  cout << " --- --- --- Finished kernel --- --- --- " << endl;
 }
 
 __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, unsigned long deposit_amount,
@@ -133,7 +133,9 @@ public:
   ManagedBank() {
     accounts = new ManagedBankAccount[NUM_BANK_ACCOUNTS];
     for (int i = 0; i < NUM_BANK_ACCOUNTS; i++) {
-      ManagedBankAccount::initialize_account(accounts + i, i * 1000, i);
+      unsigned long balance = i * 1000;
+      unsigned long id = i;
+      ManagedBankAccount::initialize_account(accounts + i, balance, id);
     }
 
     CUDA_CHECK(cudaMallocManaged(&finished, sizeof(int)));
