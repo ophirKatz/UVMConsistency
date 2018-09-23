@@ -228,7 +228,7 @@ public:
   static void strong_consistency_broken() {
     ManagedBank bank;
     bank.print();
-    unsigned long account_id = 0;
+    unsigned long account_id = 1;
     unsigned long balance = bank.check_balance(account_id);
     bank.deposit(0, 1000);
     bank.print();
