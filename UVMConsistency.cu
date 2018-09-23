@@ -102,7 +102,9 @@ __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, un
     *finished = GPU_FINISH;
   }
   // Wait for CPU to release
-  while (*finished != CPU_FINISH);
+  while (*finished != CPU_FINISH) {
+    printf("[in deposit_to_account] finished is %d\n", *finished);
+  }
   
   printf(" --- --- --- Finished kernel --- --- --- \n");
 }
@@ -171,17 +173,15 @@ public:
     long balance = -1;
     UVMSPACE ManagedBankAccount *account = (ManagedBankAccount *) accounts;
 
-    cout << __LINE__ << endl;
     for (int account_index = 0; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
-      cout << __LINE__ << endl;
       if (account->account_id == account_id) {
         balance = account->balance;
         break;
       }
     }
-    cout << __LINE__ << endl;
+
+    cout << "[in check_balance] finished = CPU_FINISH" << endl;
     *finished = CPU_FINISH; // check_balance means the CPU has its answer
-    cout << __LINE__ << endl;
     return balance;
   }
 
