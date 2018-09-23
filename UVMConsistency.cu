@@ -104,7 +104,7 @@ __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, un
   // Wait for CPU to release
   while (*finished != CPU_FINISH);
   
-  cout << " --- --- --- Finished kernel --- --- --- " << endl;
+  printf(" --- --- --- Finished kernel --- --- --- \n");
 }
 
 __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, unsigned long deposit_amount,
