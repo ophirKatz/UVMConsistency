@@ -98,10 +98,12 @@ __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, un
   __threadfence_system();
 
   ONLY_THREAD {
-    atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
     *finished = GPU_FINISH;
+    __threadfence_system(); // Writing finished GPU memory so CPU can see
+
+    // NOTE : need to sync this for the change to be seen in CPU (this is whats being tested)
+    atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
   }
-  __threadfence_system(); // Writing GPU memory so CPU can see
 
   // Wait for CPU to release
   bool printed = false;
@@ -191,11 +193,13 @@ public:
       }
     }
 
-    cout << "[in check_balance] finished = CPU_FINISH" << endl;
+    return balance;
+  }
+
+  void finish_deposit() {
+    cout << "[in finish_deposit] finished = " << CPU_FINISH << endl;
     *finished = CPU_FINISH; // check_balance means the CPU has its result
     __sync_synchronize();
-
-    return balance;
   }
 
   void print() {
@@ -230,7 +234,9 @@ public:
     bank.print();
     unsigned long new_balance = balance + 1000;
     cout << endl << "Destroying Bank" << endl;
-    if (bank.check_balance(account_id) != new_balance) {
+    unsigned long second_balance = bank.check_balance(account_id);
+    bank.finish_deposit();
+    if (second_balance != new_balance) {
       cout << "Error!" << endl;
     }
   }
