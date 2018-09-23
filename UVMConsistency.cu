@@ -79,6 +79,7 @@ public:
   }
 
   void operator delete(void *ptr) {
+    cout << "deleting array" << endl;
     CUDA_CHECK(cudaDeviceSynchronize());
     CUDA_CHECK(cudaFree(ptr));
   }
