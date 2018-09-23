@@ -101,6 +101,7 @@ __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, un
 __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, unsigned long deposit_amount,
                             volatile int *finished, UVMSPACE OUT int *status) {
   UVMSPACE ManagedBankAccount *account = (ManagedBankAccount *) bank_ptr;
+  printf("account (bank_ptr) is at address : %p\n", bank_ptr);
   int account_index = 0;
   for (; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
     UVMSPACE unsigned long id = account->account_id;
