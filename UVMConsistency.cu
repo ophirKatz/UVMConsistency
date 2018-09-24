@@ -101,8 +101,6 @@ __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, un
 
   // Wait for CPU to release
   while (*finished != ALERT_GPU);
-  
-  printf(" --- --- --- Finished kernel --- --- --- \n");
 }
 
 __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, unsigned long deposit_amount,
@@ -146,10 +144,7 @@ public:
   }
 
   ~ManagedBank() {
-    cout << endl << "Destroying Bank" << endl;
-    cout << "Freeing <accounts> array" << endl;
     delete[] accounts;
-    cout << "Freeing <finished>" << endl;
     CUDA_CHECK(cudaFree((int *) finished));
   }
 
@@ -187,7 +182,6 @@ public:
   }
 
   void finish_deposit() {
-    cout << "[in finish_deposit] finished was = " << *finished << " and now = " << ALERT_GPU << endl;
     *finished = ALERT_GPU; // check_balance means the CPU has its result
     __sync_synchronize();
     CUDA_CHECK(cudaDeviceSynchronize());  // Waiting for kernel to finish
