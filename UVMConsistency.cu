@@ -95,9 +95,9 @@ public:
 __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, unsigned long deposit_amount,
                                   volatile int *finished) {
   // NOTE : need to sync this for the change to be seen in CPU (this is whats being tested)
-  atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
   *finished = ALERT_CPU;
   __threadfence_system(); // Writing finished GPU memory so CPU can see
+  atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
 
   // Wait for CPU to release
   bool printed = false;
