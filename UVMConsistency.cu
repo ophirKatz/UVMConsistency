@@ -234,11 +234,10 @@ public:
     // Depositing an amount - done in GPU thread
     bank.deposit(UVMConsistency::account_id, UVMConsistency::deposit_amount);
     
-    bank.print();
-    
     unsigned long new_balance = balance + UVMConsistency::deposit_amount;
     // Wait for deposit to occur in GPU thread
     bank.wait_for_deposit();
+    bank.print();
     unsigned long second_balance = bank.check_balance(UVMConsistency::account_id);
     
     // Finish the transaction
