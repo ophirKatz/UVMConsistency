@@ -153,7 +153,6 @@ public:
 
   ~ManagedBank() {
     cout << endl << "Destroying Bank" << endl;
-    CUDA_CHECK(cudaDeviceSynchronize());  // Waiting for kernel to finish
     cout << "Freeing <accounts> array" << endl;
     delete[] accounts;
     cout << "Freeing <finished>" << endl;
@@ -193,6 +192,7 @@ public:
     cout << "[in finish_deposit] finished was = " << *finished << " and now = " << ALERT_GPU << endl;
     *finished = ALERT_GPU; // check_balance means the CPU has its result
     __sync_synchronize();
+    CUDA_CHECK(cudaDeviceSynchronize());  // Waiting for kernel to finish
   }
 
   void print() {
