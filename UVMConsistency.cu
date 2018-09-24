@@ -99,8 +99,8 @@ __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, un
   __threadfence_system();
 
   ONLY_THREAD {
-    *finished = GPU_FINISH;
-    __threadfence_system(); // Writing finished GPU memory so CPU can see
+    // *finished = GPU_FINISH;
+    // __threadfence_system(); // Writing finished GPU memory so CPU can see
 
     // NOTE : need to sync this for the change to be seen in CPU (this is whats being tested)
     atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
