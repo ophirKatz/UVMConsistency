@@ -41,10 +41,10 @@ using namespace std;
 #define ONLY_THREAD if (threadIdx.x == 0)
 
 #define UVMSPACE      volatile
-#define CPU_START     10
-#define GPU_START     1
-#define CPU_FINISH    2
-#define GPU_FINISH    3
+#define START         0
+#define ALERT_CPU     1
+#define ALERT_GPU     2
+
 #define OUT
 
 #define NUM_BANK_ACCOUNTS 1
@@ -94,23 +94,14 @@ public:
 
 __device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, unsigned long deposit_amount,
                                   volatile int *finished) {
-  printf("[deposit_to_account] finished variable is %d\n", *finished);
-  // __threadfence_system();
-  // *finished = GPU_START;
-
-  ONLY_THREAD {
-    // *finished = GPU_FINISH;
-    // __threadfence_system(); // Writing finished GPU memory so CPU can see
-    
-    // NOTE : need to sync this for the change to be seen in CPU (this is whats being tested)
-    atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
-    // Adding fence for strong consistency
-    __threadfence_system();
-  }
+  // NOTE : need to sync this for the change to be seen in CPU (this is whats being tested)
+  atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
+  *finished = ALERT_CPU;
+  __threadfence_system(); // Writing finished GPU memory so CPU can see
 
   // Wait for CPU to release
   bool printed = false;
-  while (*finished != CPU_FINISH) {
+  while (*finished != ALERT_GPU) {
     if (!printed) {
       printf("[in deposit_to_account] finished is %d\n", *finished);
       printed = true;
@@ -138,9 +129,7 @@ __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, 
   *status = 0;
   __threadfence_system();
 
-  printf("entering deposit_to_account\n");
   deposit_to_account(account, deposit_amount, finished);
-  printf("[bank_deposit] out of deposit_to_account\n");
 }
 
 
@@ -156,9 +145,7 @@ public:
     }
 
     CUDA_CHECK(cudaMallocManaged(&finished, sizeof(int)));
-    memset((void *) finished, 0, sizeof(int));
-
-    printf("Address of <finished> is : %p\n", finished);
+    memset((void *) finished, START, sizeof(int));
 
     // Writing all the changes of UM to GPU
     __sync_synchronize();
@@ -173,12 +160,14 @@ public:
     CUDA_CHECK(cudaFree((int *) finished));
   }
 
+  void start_transaction() {
+    *finished = START;
+    __sync_synchronize();
+  }
+
   bool deposit(unsigned long account_id, unsigned long deposit_amount) {
     UVMSPACE int *action_status;
     CUDA_CHECK(cudaMallocManaged(&action_status, sizeof(int)));
-
-    *finished = CPU_START;
-    __sync_synchronize(); // Syncing write to UM so kernel thread can see
 
     // Call the kernel that uses the unified memory mapped page
     bank_deposit<<<1,1>>>(accounts, account_id, deposit_amount, finished, action_status);
@@ -193,7 +182,6 @@ public:
     for (int account_index = 0; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
       if (account->account_id == account_id) {
         balance = account->balance;
-        cout << "[in check_balance] Found account with id " << account_id << endl;
         break;
       }
     }
@@ -202,8 +190,8 @@ public:
   }
 
   void finish_deposit() {
-    cout << "[in finish_deposit] finished was = " << *finished << " and now = " << CPU_FINISH << endl;
-    *finished = CPU_FINISH; // check_balance means the CPU has its result
+    cout << "[in finish_deposit] finished was = " << *finished << " and now = " << ALERT_GPU << endl;
+    *finished = ALERT_GPU; // check_balance means the CPU has its result
     __sync_synchronize();
   }
 
@@ -233,17 +221,33 @@ public:
   static void strong_consistency_broken() {
     ManagedBank bank;
     bank.print();
-    unsigned long account_id = 1;
-    unsigned long balance = bank.check_balance(account_id);
-    bank.deposit(account_id, 1000);
+
+    // Getting initial balance
+    unsigned long balance = bank.check_balance(UVMConsistency::account_id);
+
+    // Starting the transaction
+    bank.start_transaction();
+    // Depositing an amount - done in GPU thread
+    bank.deposit(UVMConsistency::account_id, UVMConsistency::deposit_amount);
+    
     bank.print();
-    unsigned long new_balance = balance + 1000;
-    unsigned long second_balance = bank.check_balance(account_id);
+    
+    unsigned long new_balance = balance + UVMConsistency::deposit_amount;
+    unsigned long second_balance = bank.check_balance(UVMConsistency::account_id);
+    
+    // Finish the transaction
     bank.finish_deposit();
+    
+    // Check the result
     if (second_balance != new_balance) {
-      cout << "Error!" << endl;
+      cout << "Error! Strong Consistency is not adhered to!" << endl;
+    } else {
+      cout << "Success! Strong Consistency achieved!" << endl;
     }
   }
+private:
+  static const unsigned long account_id = 1;
+  static const unsigned long deposit_amount = 1000;
 };
 
 int main() {
