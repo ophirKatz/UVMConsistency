@@ -179,6 +179,7 @@ public:
 
   void wait_for_deposit() {
     while(*finished != ALERT_CPU);
+    cout << " --- --- --- Deposit finished --- --- ---" << endl;
   }
 
   void finish_deposit() {
