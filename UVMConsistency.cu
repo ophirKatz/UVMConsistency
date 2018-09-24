@@ -188,6 +188,10 @@ public:
     return balance;
   }
 
+  void wait_for_deposit() {
+    while(*finished != ALERT_CPU);
+  }
+
   void finish_deposit() {
     cout << "[in finish_deposit] finished was = " << *finished << " and now = " << ALERT_GPU << endl;
     *finished = ALERT_GPU; // check_balance means the CPU has its result
@@ -233,6 +237,8 @@ public:
     bank.print();
     
     unsigned long new_balance = balance + UVMConsistency::deposit_amount;
+    // Wait for deposit to occur in GPU thread
+    bank.wait_for_deposit();
     unsigned long second_balance = bank.check_balance(UVMConsistency::account_id);
     
     // Finish the transaction
