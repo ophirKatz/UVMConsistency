@@ -115,11 +115,11 @@ __global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, 
   }
   if (account_index >= NUM_BANK_ACCOUNTS) { // Account was not found (error handling...)
     *status = -1;
-    __threadfence_system();
+    // __threadfence_system();
     return;
   }
   *status = 0;
-  __threadfence_system();
+  // __threadfence_system();
 
   deposit_to_account(account, deposit_amount, finished);
 }
@@ -179,7 +179,7 @@ public:
 
   void wait_for_deposit() {
     while(*finished != ALERT_CPU);
-    cout << " --- --- --- Deposit finished --- --- ---" << endl;
+    cout << " --- --- --- Deposit finished --- --- --- " << endl << endl;
   }
 
   void finish_deposit() {
