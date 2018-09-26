@@ -186,6 +186,7 @@ public:
     *finished = ALERT_GPU; // check_balance means the CPU has its result
     __sync_synchronize();
     CUDA_CHECK(cudaDeviceSynchronize());  // Waiting for kernel to finish
+    while(true);
   }
 
   void print() {
@@ -229,7 +230,7 @@ public:
     bank.print();
     unsigned long second_balance = bank.check_balance(UVMConsistency::account_id);
     
-    // Finish the transaction
+    // Finish the transaction (let the GPU thread return)
     bank.finish_deposit();
     
     // Check the result
