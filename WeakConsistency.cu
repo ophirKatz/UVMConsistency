@@ -19,30 +19,62 @@ using namespace std;
 #define ONLY_THREAD if (threadIdx.x == 0)
 
 
+#define START       0
+#define CAN_WRITE   1
+#define AFTER_WRITE 2
+#define CAN_READ    3
+#define AFTER_READ  4
+#define FINISH      5
 
-__global__ void kernel(volatile int *ptr, volatile int *flag) {
+__device__ void writer_thread(volatile int *ptr, volatile int *flag) {
+  while (*flag != CAN_WRITE);
+
   *ptr = 1;
-  *flag = 1;
-  while (*flag != 2);
+  *flag = AFTER_WRITE;
+
+  while (*flag != FINISH);
+}
+
+__device__ void reader_thread(volatile int *ptr, volatile int *flag, volatile int *out) {
+  while (*flag != CAN_READ);
+
+  *out = *ptr;
+  *flag = AFTER_READ;
+
+  while (*flag != FINISH);
+}
+
+
+__global__ void kernel(volatile int *ptr, volatile int *flag, volatile int *out) {
+  if (blockIdx.x == 0) {
+    writer_thread(ptr, flag);
+  } else {
+    reader_thread(ptr, flag, out);
+  }
 }
 
 int main() {
-  volatile int *ptr, *flag;
+  volatile int *ptr, *flag, *out;
   CUDA_CHECK(cudaMallocManaged(&ptr, sizeof(int)));
   CUDA_CHECK(cudaMallocManaged(&flag, sizeof(int)));
+  CUDA_CHECK(cudaMallocManaged(&out, sizeof(int)));
   memset((void *) ptr, 0, sizeof(int));
-  memset((void *) flag, 0, sizeof(int));
+  memset((void *) flag, START, sizeof(int));
+  memset((void *) out, 0, sizeof(int));
 
-  cout << __LINE__ << endl;
-  kernel<<<1,1>>>(ptr, flag);
-  cout << __LINE__ << endl;
+  kernel<<<1,2>>>(ptr, flag, out);
   
-  while (*flag != 1);
-  printf("*ptr = %d\n", *ptr);
-  *flag = 2;
+  printf("*ptr before write is %d\n", *ptr);
+  *flag = CAN_WRITE;
+  while (*flag != AFTER_WRITE);
+  *flag = CAN_READ;
+  while (*flag != AFTER_READ);
+  printf("*ptr after write is %d\n", *out);
+  *flag = FINISH;
 
   CUDA_CHECK(cudaFree((int *) ptr));
   CUDA_CHECK(cudaFree((int *) flag));
+  CUDA_CHECK(cudaFree((int *) out));
 
   return 0;
 }
