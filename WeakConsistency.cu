@@ -26,25 +26,18 @@ using namespace std;
 #define FINISH      5
 
 __device__ void writer_thread(volatile int *ptr, volatile int *flag) {
-  printf("%d\n", __LINE__);
   while (*flag != CAN_WRITE);
 
-  printf("%d\n", __LINE__);
   *ptr = 1;
   *flag = AFTER_WRITE;
-  printf("%d\n", __LINE__);
-  
   while (*flag != FINISH);
 }
 
 __device__ void reader_thread(volatile int *ptr, volatile int *flag, volatile int *out) {
-  printf("%d\n", __LINE__);
   while (*flag != CAN_READ);
   
-  printf("%d\n", __LINE__);
   *out = *ptr;
   *flag = AFTER_READ;
-  printf("%d\n", __LINE__);
 
   while (*flag != FINISH);
 }
@@ -72,7 +65,6 @@ int main() {
   printf("*ptr before write is %d\n", *ptr);
   *flag = CAN_WRITE;
   while (*flag != AFTER_WRITE);
-  printf("*flag = CAN_READ\n");
   *flag = CAN_READ;
   while (*flag != AFTER_READ);
   printf("*ptr after write is %d\n", *out);
