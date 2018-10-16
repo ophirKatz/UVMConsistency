@@ -18,7 +18,6 @@ using namespace std;
 
 #define ONLY_THREAD if (threadIdx.x == 0)
 
-
 #define START       0
 #define CAN_WRITE   1
 #define AFTER_WRITE 2
@@ -27,19 +26,25 @@ using namespace std;
 #define FINISH      5
 
 __device__ void writer_thread(volatile int *ptr, volatile int *flag) {
+  printf("%d\n", __LINE__);
   while (*flag != CAN_WRITE);
 
+  printf("%d\n", __LINE__);
   *ptr = 1;
   *flag = AFTER_WRITE;
-
+  printf("%d\n", __LINE__);
+  
   while (*flag != FINISH);
 }
 
 __device__ void reader_thread(volatile int *ptr, volatile int *flag, volatile int *out) {
+  printf("%d\n", __LINE__);
   while (*flag != CAN_READ);
-
+  
+  printf("%d\n", __LINE__);
   *out = *ptr;
   *flag = AFTER_READ;
+  printf("%d\n", __LINE__);
 
   while (*flag != FINISH);
 }
