@@ -67,11 +67,12 @@ int main() {
   memset((void *) flag, START, sizeof(int));
   memset((void *) out, 0, sizeof(int));
 
-  kernel<<<1,2>>>(ptr, flag, out);
+  kernel<<<2,1>>>(ptr, flag, out);
   
   printf("*ptr before write is %d\n", *ptr);
   *flag = CAN_WRITE;
   while (*flag != AFTER_WRITE);
+  printf("*flag = CAN_READ\n");
   *flag = CAN_READ;
   while (*flag != AFTER_READ);
   printf("*ptr after write is %d\n", *out);
