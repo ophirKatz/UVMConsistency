@@ -95,6 +95,7 @@ public:
 __device__ void increment_unit(UVMSPACE SharedUnit *unit, UVMSPACE ulli *mask) {
   atomicAdd((int *) &unit->value, 1);
   BitManipulation::set_bit(mask, unit->index);
+	// __threadfence_system();
 }
 
 __global__ void UVM_increment(UVMSPACE SharedUnit *shared_units, UVMSPACE ulli *mask, UVMSPACE int *finished, int NUM_SHARED) {
