@@ -98,12 +98,15 @@ __device__ void increment_unit(UVMSPACE SharedUnit *unit, UVMSPACE ulli *mask) {
 
 __global__ void UVM_increment(UVMSPACE SharedUnit *shared_units, UVMSPACE ulli *mask, UVMSPACE int *finished) {
   // Wait for CPU
+  printf("before GPU_START loop\n");
   while (*finished != GPU_START);
   
+  printf("Starting loop\n");
   for (int i = 0; i < NUM_SHARED; i++) {
     UVMSPACE SharedUnit *unit = &shared_units[i];
     increment_unit(unit, mask);
   }
+  printf("After loop\n");
   
   // GPU finished - CPU can finish
   *finished = GPU_FINISH;
@@ -157,11 +160,12 @@ private:
   void check_consistency() {
     ulli compared_mask = *mask;
     int last_unit_index = -1;
+    int count_new_units = 0;
 
     // GPU can start
     *finished = GPU_START;
 
-    while (*finished != GPU_FINISH) {
+    while (*finished != GPU_FINISH || count_new_units < NUM_SHARED) {
       while (*mask == compared_mask);
       int new_unit_index = Consistency::get_new_unit_changed(mask, compared_mask);
       assert (this->shared_units[new_unit_index].value != 0);
@@ -170,6 +174,7 @@ private:
                         " and current unit is : "   << new_unit_index << ::std::endl;
       }
       last_unit_index = new_unit_index;
+      count_new_units++;
     }
   }
 
