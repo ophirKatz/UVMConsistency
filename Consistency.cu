@@ -30,7 +30,8 @@ namespace UVMConsistency {
 #define GPU_FINISH    2
 #define FINISH        3
 
-#define NUM_SHARED 2
+#define NUM_SHARED_DEFAULT 2
+int NUM_SHARED = NUM_SHARED_DEFAULT;
 
 typedef unsigned long long int ulli;
 
@@ -96,7 +97,7 @@ __device__ void increment_unit(UVMSPACE SharedUnit *unit, UVMSPACE ulli *mask) {
   BitManipulation::set_bit(mask, unit->index);
 }
 
-__global__ void UVM_increment(UVMSPACE SharedUnit *shared_units, UVMSPACE ulli *mask, UVMSPACE int *finished) {
+__global__ void UVM_increment(UVMSPACE SharedUnit *shared_units, UVMSPACE ulli *mask, UVMSPACE int *finished, int NUM_SHARED) {
   // Wait for CPU
   printf("before GPU_START loop\n");
   while (*finished != GPU_START);
@@ -152,7 +153,7 @@ private:	// Logic
 
   void launch_task() {
     // Start GPU task
-    UVM_increment<<<1,1>>>(shared_units, mask, finished);
+    UVM_increment<<<1,1>>>(shared_units, mask, finished, NUM_SHARED);
   }
 
   void check_consistency() {
@@ -216,7 +217,10 @@ private:
 };  // namespace UVMConsistency
 
 
-int main() {
+int main(int argc, char *argv[]) {
+  if (argc > 1) {
+    UVMConsistency::NUM_SHARED = atoi(argv[1]);
+  }
   UVMConsistency::Consistency::start();
   return 0;
 }
