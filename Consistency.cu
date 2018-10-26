@@ -92,7 +92,7 @@ public:
 };
 
 __device__ void increment_unit(UVMSPACE SharedUnit *unit, UVMSPACE ulli *mask) {
-  atomicAdd((ulli *) &unit->value, (ulli) 1);
+  atomicAdd((int *) &unit->value, 1);
   printf("after atomicAdd\n");
   BitManipulation::set_bit(mask, unit->index);
   printf("after set_bit\n");
