@@ -121,7 +121,7 @@ __global__ void UVM_increment(UVMSPACE SharedUnit *shared_units, UVMSPACE ulli *
 }
 
 class Consistency {
-private:
+private:	// Constructor & Destructor
 
   Consistency() {
     shared_units = new SharedUnit[NUM_SHARED];
@@ -148,8 +148,7 @@ private:
   }
 
   
-  // Logic
-  // CPU Logic
+private:	// Logic
 
   static int get_new_unit_changed(UVMSPACE ulli *mask, ulli compared_mask) {
     return BitManipulation::get_first_set_bit_index(
