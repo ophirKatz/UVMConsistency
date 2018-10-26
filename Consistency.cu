@@ -103,8 +103,11 @@ __global__ void UVM_increment(UVMSPACE SharedUnit *shared_units, UVMSPACE ulli *
   
   printf("Starting loop\n");
   for (int i = 0; i < NUM_SHARED; i++) {
+    printf("iteration %d\n", i);
     UVMSPACE SharedUnit *unit = &shared_units[i];
+    printf("incrementing unit\n");
     increment_unit(unit, mask);
+    printf("after incrementing unit\n");
   }
   printf("After loop\n");
   
