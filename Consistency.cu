@@ -30,7 +30,7 @@ namespace UVMConsistency {
 #define GPU_FINISH    2
 #define FINISH        3
 
-#define NUM_SHARED 10
+#define NUM_SHARED 2
 
 typedef unsigned long long int ulli;
 
@@ -50,7 +50,7 @@ public:
   }
 
   static int get_first_set_bit_index(ulli number) {
-    return __builtin_clz(number);
+    return 31 - __builtin_clz(number);
   }
 };
 
@@ -144,7 +144,7 @@ private:
   ~Consistency() {
     delete[] shared_units;
     CUDA_CHECK(cudaFree((int *) finished));
-    CUDA_CHECK(cudaFree((ulli *) finished));
+    CUDA_CHECK(cudaFree((ulli *) mask));
   }
 
   
@@ -170,20 +170,30 @@ private:
     // GPU can start
     *finished = GPU_START;
 
-    while (*finished != GPU_FINISH || count_new_units < NUM_SHARED) {
+    while (count_new_units < NUM_SHARED) {
       while (*mask == compared_mask);
       int new_unit_index = Consistency::get_new_unit_changed(mask, compared_mask);
-      assert (this->shared_units[new_unit_index].value != 0);
+			UVMSPACE SharedUnit *unit = &this->shared_units[new_unit_index];
+			if (unit->index != new_unit_index) {
+				printf("The unit index is : %d and new_unit_index is : %d\n", unit->index, new_unit_index);
+			}
+      if (unit->value == 0) {
+				printf("The value of the unit at index %d is %d\n", new_unit_index, unit->value);
+			}
       if (last_unit_index + 1 != new_unit_index) {
         ::std::cout <<  "Error : Last unit was : "  << last_unit_index << 
                         " and current unit is : "   << new_unit_index << ::std::endl;
-      }
+      } else {
+				::std::cout << "Succes for index " << new_unit_index << ::std::endl;
+			}
       last_unit_index = new_unit_index;
       count_new_units++;
+			// if (count_new_units == NUM_SHARED) break;
     }
   }
 
   void finish_task() {
+		while (*finished != GPU_FINISH);
     // Task is over
     *finished = FINISH;
   }
