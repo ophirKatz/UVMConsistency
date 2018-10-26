@@ -93,9 +93,7 @@ public:
 
 __device__ void increment_unit(UVMSPACE SharedUnit *unit, UVMSPACE ulli *mask) {
   atomicAdd((int *) &unit->value, 1);
-  printf("after atomicAdd\n");
   BitManipulation::set_bit(mask, unit->index);
-  printf("after set_bit\n");
 }
 
 __global__ void UVM_increment(UVMSPACE SharedUnit *shared_units, UVMSPACE ulli *mask, UVMSPACE int *finished) {
@@ -105,11 +103,8 @@ __global__ void UVM_increment(UVMSPACE SharedUnit *shared_units, UVMSPACE ulli *
   
   printf("Starting loop\n");
   for (int i = 0; i < NUM_SHARED; i++) {
-    printf("iteration %d\n", i);
     UVMSPACE SharedUnit *unit = &shared_units[i];
-    printf("incrementing unit\n");
     increment_unit(unit, mask);
-    printf("after incrementing unit\n");
   }
   printf("After loop\n");
   
@@ -149,7 +144,6 @@ private:	// Constructor & Destructor
 
   
 private:	// Logic
-
   static int get_new_unit_changed(UVMSPACE ulli *mask, ulli compared_mask) {
     return BitManipulation::get_first_set_bit_index(
       BitManipulation::get_difference(*mask, compared_mask)
