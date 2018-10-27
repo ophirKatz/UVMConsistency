@@ -93,7 +93,7 @@ public:
 };
 
 __device__ void increment_unit(UVMSPACE SharedUnit *unit, UVMSPACE ulli *mask) {
-  atomicAdd((int *) &unit->value, 1);
+  // atomicAdd((int *) &unit->value, 1);
   BitManipulation::set_bit(mask, unit->index);
 	// __threadfence_system();
 }
@@ -107,7 +107,7 @@ __global__ void UVM_increment(UVMSPACE SharedUnit *shared_units, UVMSPACE ulli *
   for (int i = 0; i < NUM_SHARED; i++) {
     UVMSPACE SharedUnit *unit = &shared_units[i];
     increment_unit(unit, mask);
-		for (int j = 0; j < 100000; j++);
+		// for (int j = 0; j < 100000; j++);
   }
   printf("After loop\n");
   
@@ -168,7 +168,8 @@ private:	// Logic
 
     while (count_new_units < NUM_SHARED) {
       while (*mask == compared_mask);
-			printf("The mask is : %d\n", (int) *mask);
+			printf("The mask : %d\n", *mask);
+			/*printf("The mask is : %d\n", (int) *mask);
       int new_unit_index = Consistency::get_new_unit_changed(mask, compared_mask);
 			UVMSPACE SharedUnit *unit = &this->shared_units[new_unit_index];
 			if (unit->index != new_unit_index) {
@@ -182,8 +183,8 @@ private:	// Logic
                         " and current unit is : "   << new_unit_index << ::std::endl;
       } else {
 				::std::cout << "Succes for index " << new_unit_index << ::std::endl;
-			}
-      last_unit_index = new_unit_index;
+			}*/
+      // last_unit_index = new_unit_index;
       count_new_units++;
 			// if (count_new_units == NUM_SHARED) break;
     }

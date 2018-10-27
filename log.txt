@@ -1,18 +1,66 @@
 Launching kernel
 Start CPU loop
-Succes for index 0
-Error : Last unit was : 0 and current unit is : 0
+The mask is : 67108863
+Error : Last unit was : -1 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
+The mask is : 67108863
+Error : Last unit was : 25 and current unit is : 25
 Finish task
 before GPU_START loop
 Starting loop
-iteration 0
-incrementing unit
-after atomicAdd
-after set_bit
-after incrementing unit
-iteration 1
-incrementing unit
-after atomicAdd
-after set_bit
-after incrementing unit
 After loop
