@@ -26,7 +26,7 @@
 #define GPU_FINISH    2
 #define FINISH        3
 
-#define NUM_SHARED 100000
+#define NUM_SHARED 1000000
 
 namespace UVMConsistency {
 
@@ -82,7 +82,7 @@ private:	// Logic
   void print_arr(UVMSPACE int *arr) {
     printf("[");
     for (int i = 0; i < NUM_SHARED; i++) {
-      printf("%d,", arr[i]);
+      printf("%d", arr[i]);
       if (i < NUM_SHARED - 1) {
         printf(",");
       }
@@ -94,7 +94,7 @@ private:	// Logic
     // Read shared memory page - sequentially
     for (int i = 0; i < NUM_SHARED - 1; i++) {
       if (arr[i] < arr[i + 1]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
-        print_arr(arr);
+        // print_arr(arr);
         return true;
       }
     }
