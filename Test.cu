@@ -15,11 +15,9 @@
   }                                                                                       \
 } while (0)
 
-#define ONLY_THREAD if (threadIdx.x == 0)
+namespace UVMConsistency {
 
-#define OUT
 #define UVMSPACE      volatile
-
 
 #define START         0
 #define GPU_START     1
@@ -27,8 +25,6 @@
 #define FINISH        3
 
 #define NUM_SHARED 100
-
-namespace UVMConsistency {
 
 typedef unsigned long long int ulli;
 
@@ -51,27 +47,23 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished)
 
 class Consistency {
 private:	// Constructor & Destructor
-  
-    Consistency() {
+  Consistency() {
+    CUDA_CHECK(cudaMallocManaged(&arr, sizeof(int) * NUM_SHARED));
+    memset((void *) arr, 0, sizeof(int) * NUM_SHARED);
 
-      CUDA_CHECK(cudaMallocManaged(&arr, sizeof(int) * NUM_SHARED));
-      memset((void *) arr, 0, sizeof(int) * NUM_SHARED);
+    CUDA_CHECK(cudaMallocManaged(&finished, sizeof(int)));
+    memset((void *) finished, START, sizeof(int));
+
+    // Writing all the changes of UM to GPU
+    __sync_synchronize();
+  }
+
+  ~Consistency() {
+    CUDA_CHECK(cudaFree((int *) arr));
+    CUDA_CHECK(cudaFree((int *) finished));
+  }
   
-      CUDA_CHECK(cudaMallocManaged(&finished, sizeof(int)));
-      memset((void *) finished, START, sizeof(int));
-  
-      // Writing all the changes of UM to GPU
-      __sync_synchronize();
-    }
-  
-    ~Consistency() {
-      CUDA_CHECK(cudaFree((int *) arr));
-      CUDA_CHECK(cudaFree((int *) finished));
-    }
-  
-    
 private:	// Logic
-
   bool is_arr_full(UVMSPACE int *arr) {
     int count = 0;
     for (int i = 0; i < NUM_SHARED; i++) {
