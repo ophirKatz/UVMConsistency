@@ -26,7 +26,7 @@
 #define GPU_FINISH    2
 #define FINISH        3
 
-#define NUM_SHARED 100000
+#define NUM_SHARED 100
 
 namespace UVMConsistency {
 
@@ -39,6 +39,7 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished)
   // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
     arr[i] = 1;
+    __threadfence_system();
   }
   
   // GPU finished - CPU can finish
@@ -94,7 +95,7 @@ private:	// Logic
     // Read shared memory page - sequentially
     for (int i = 0; i < NUM_SHARED - 1; i++) {
       if (arr[i] < arr[i + 1]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
-        print_arr(arr);
+        // print_arr(arr);
         return true;
       }
     }
@@ -125,21 +126,20 @@ private:	// Logic
     while (*finished != GPU_FINISH);
     // Task is over
     *finished = FINISH;
+
+    CUDA_CHECK(cudaDeviceSynchronize());
   }
     
 public:
   static void start() {
     Consistency consistency;
     // Start kernel
-    ::std::cout << "Launching kernel" << ::std::endl;
     consistency.launch_task();
 
     // Check GPU consistency
-    ::std::cout << "Start CPU loop" << ::std::endl;
     consistency.check_consistency();
 
     // Finish task for CPU and GPU
-    ::std::cout << "Finish task" << ::std::endl;
     consistency.finish_task();
   }
 private:
