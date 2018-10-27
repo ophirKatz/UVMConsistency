@@ -83,7 +83,7 @@ private:	// Logic
   void print_arr(UVMSPACE int *arr) {
     printf("[");
     for (int i = 0; i < NUM_SHARED; i++) {
-      printf("%d,", arr[i]);
+      printf("%d", arr[i]);
       if (i < NUM_SHARED - 1) {
         printf(",");
       }
