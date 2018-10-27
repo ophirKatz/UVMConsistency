@@ -22,9 +22,6 @@
 #define UVMSPACE      volatile
 
 
-namespace UVMConsistency {
-
-
 #define START         0
 #define GPU_START     1
 #define GPU_FINISH    2
@@ -82,7 +79,7 @@ void CPU() {
   CUDA_CHECK(cudaMallocManaged(&finished, sizeof(int)));
   memset((void *) finished, START, sizeof(int));
 
-  UVM_increment<<<1,1>>>(arr, finished);
+  kernel<<<1,1>>>(arr, finished);
 
   // GPU can start
   *finished = GPU_START;
@@ -99,5 +96,5 @@ void CPU() {
 int main() {
   CPU();
 
-  return ;
+  return 0;
 }
