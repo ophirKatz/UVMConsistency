@@ -60,13 +60,12 @@ bool is_full(volatile int *arr) {
   return count == NUM_SHARED;
 }
 
-void print_first(volatile int *arr) {
+void print_arr(volatile int *arr) {
+  printf("[");
   for (int i = 0; i < NUM_SHARED; i++) {
-    if (arr[i]) {
-      printf("The first full index : %d\n", i);
-      break;
-    }
+    printf("%d,", arr[i]);
   }
+  printf("[\n");
 }
 
 void CPU() {
@@ -85,7 +84,7 @@ void CPU() {
   *finished = GPU_START;
 
   while (!is_full(arr)) {
-    print_first(arr);
+    print_arr(arr);
   }
 
   while (*finished != GPU_FINISH);
