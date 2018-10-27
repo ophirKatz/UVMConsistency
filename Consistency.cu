@@ -107,6 +107,7 @@ __global__ void UVM_increment(UVMSPACE SharedUnit *shared_units, UVMSPACE ulli *
   for (int i = 0; i < NUM_SHARED; i++) {
     UVMSPACE SharedUnit *unit = &shared_units[i];
     increment_unit(unit, mask);
+		for (int j = 0; j < 100000; j++);
   }
   printf("After loop\n");
   
@@ -167,6 +168,7 @@ private:	// Logic
 
     while (count_new_units < NUM_SHARED) {
       while (*mask == compared_mask);
+			printf("The mask is : %d\n", (int) *mask);
       int new_unit_index = Consistency::get_new_unit_changed(mask, compared_mask);
 			UVMSPACE SharedUnit *unit = &this->shared_units[new_unit_index];
 			if (unit->index != new_unit_index) {
