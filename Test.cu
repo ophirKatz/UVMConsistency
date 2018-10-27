@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -27,23 +26,20 @@
 #define GPU_FINISH    2
 #define FINISH        3
 
-#define NUM_SHARED 1000
+#define NUM_SHARED 100000
+
+namespace UVMConsistency {
 
 typedef unsigned long long int ulli;
 
-
-
-__global__ void kernel(volatile int *arr, volatile int *finished) {
+__global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished) {
   // Wait for CPU
-  printf("before GPU_START loop\n");
   while (*finished != GPU_START);
   
-  printf("Starting loop\n");
+  // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
     arr[i] = 1;
-		// for (int j = 0; j < 100000; j++);
   }
-  printf("After loop\n");
   
   // GPU finished - CPU can finish
   *finished = GPU_FINISH;
@@ -52,48 +48,109 @@ __global__ void kernel(volatile int *arr, volatile int *finished) {
   while (*finished != FINISH);
 }
 
-bool is_full(volatile int *arr) {
-  int count = 0;
-  for (int i = 0; i < NUM_SHARED; i++) {
-    count += arr[i];
+class Consistency {
+private:	// Constructor & Destructor
+  
+    Consistency() {
+
+      CUDA_CHECK(cudaMallocManaged(&arr, sizeof(int) * NUM_SHARED));
+      memset((void *) arr, 0, sizeof(int) * NUM_SHARED);
+  
+      CUDA_CHECK(cudaMallocManaged(&finished, sizeof(int)));
+      memset((void *) finished, START, sizeof(int));
+  
+      // Writing all the changes of UM to GPU
+      __sync_synchronize();
+    }
+  
+    ~Consistency() {
+      CUDA_CHECK(cudaFree((int *) arr));
+      CUDA_CHECK(cudaFree((int *) finished));
+    }
+  
+    
+private:	// Logic
+
+  bool is_arr_full(UVMSPACE int *arr) {
+    int count = 0;
+    for (int i = 0; i < NUM_SHARED; i++) {
+      count += arr[i];
+    }
+    return count == NUM_SHARED;
   }
-  return count == NUM_SHARED;
-}
-
-void print_arr(volatile int *arr) {
-  printf("[");
-  for (int i = 0; i < NUM_SHARED; i++) {
-    printf("%d,", arr[i]);
-  }
-  printf("[\n");
-}
-
-void CPU() {
-  volatile int *arr;
-  volatile int *finished;
-
-  CUDA_CHECK(cudaMallocManaged(&arr, sizeof(int) * NUM_SHARED));
-  memset((void *) arr, 0, sizeof(int) * NUM_SHARED);
-
-  CUDA_CHECK(cudaMallocManaged(&finished, sizeof(int)));
-  memset((void *) finished, START, sizeof(int));
-
-  kernel<<<1,1>>>(arr, finished);
-
-  // GPU can start
-  *finished = GPU_START;
-
-  while (!is_full(arr)) {
-    print_arr(arr);
+  
+  void print_arr(UVMSPACE int *arr) {
+    printf("[");
+    for (int i = 0; i < NUM_SHARED; i++) {
+      printf("%d,", arr[i]);
+      if (i < NUM_SHARED - 1) {
+        printf(",");
+      }
+    }
+    printf("]\n");
   }
 
-  while (*finished != GPU_FINISH);
-  // Task is over
-  *finished = FINISH;
-}
+  bool check_consistency(UVMSPACE int *arr) {
+    // Read shared memory page - sequentially
+    for (int i = 0; i < NUM_SHARED - 1; i++) {
+      if (arr[i] < arr[i + 1]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
+        print_arr(arr);
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  void launch_task() {
+    // Start GPU task
+    GPU_UVM_Writer_Kernel<<<1,1>>>(arr, finished);
+
+    // GPU can start
+    *finished = GPU_START;
+  }
+
+  void check_consistency() {
+    // While writes have not finished
+    while (!is_arr_full(arr)) {
+      // Check if an inconsistency exists in the array
+      if (check_consistency(arr)) {
+        ::std::cout << "Found Inconsistency !" << ::std::endl;
+        return;
+      }
+    }
+    ::std::cout << "No Consistency Found" << ::std::endl;
+  }
+
+  void finish_task() {
+    while (*finished != GPU_FINISH);
+    // Task is over
+    *finished = FINISH;
+  }
+    
+public:
+  static void start() {
+    Consistency consistency;
+    // Start kernel
+    ::std::cout << "Launching kernel" << ::std::endl;
+    consistency.launch_task();
+
+    // Check GPU consistency
+    ::std::cout << "Start CPU loop" << ::std::endl;
+    consistency.check_consistency();
+
+    // Finish task for CPU and GPU
+    ::std::cout << "Finish task" << ::std::endl;
+    consistency.finish_task();
+  }
+private:
+  UVMSPACE int *arr;
+  UVMSPACE int *finished;
+};
+
+} // UVMConsistency namespace
 
 int main() {
-  CPU();
+  UVMConsistency::Consistency::start();
 
   return 0;
 }

@@ -13,14 +13,15 @@ def check_on_line(arr):
   return consistency_error
   
 def parse_line(line):
-  arr = line.split(',')[1:-1]
-  print(arr)
+  arr = [int(e) for e in line.split(',')[1:-1]]
   return arr
 
 def main():
+  error = False
   with open('log.txt', 'r') as logFile:
     for line in logFile:
       arr = parse_line(line)
-      check_on_line(arr)
+      error = error or check_on_line(arr)
+  print('Error')
 
 main()
