@@ -35,7 +35,6 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished)
   // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
     arr[i] = 1;
-    __threadfence_system();
   }
   
   // GPU finished - CPU can finish
