@@ -1,25 +1,3 @@
-/************************************************************
- *                                                          *
- *  This program's goal is to proof that CUDA's             *
- *  UVM consistency model is strong only when local         *
- *  thread memory is flushed before handling page-          *
- *  fault in CPU. And it shows that when this condition     *
- *  is not adhered to, the consistency lacks strength.      *
- *                                                          *
- *  The project showcases a real-life example of usage      *
- *  of the UVM model, and presents a critical bug           *
- *  caused by the consistency model issues.                 *
- *                                                          *
- *                                                          *
- *  The example at hand - a bank server, that receives      *
- *  clients' requests that deposit an amount of money into  *
- *  their account. The bug occurs when the balance is       *
- *  later checked and the client discovers it has not       *
- *  changed. The fix is to add the nessesary actions in     *
- *  the code to insure the balance is correct.              *
- *                                                          *
- ************************************************************/
-
 #include <stdio.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -27,8 +5,7 @@
 #include <string.h>
 #include <iostream>
 #include <math.h>
-
-using namespace std;
+#include <bitset>
 
 #define CUDA_CHECK(f) do {                                                                \
   cudaError_t e = f;                                                                      \
@@ -38,103 +15,41 @@ using namespace std;
   }                                                                                       \
 } while (0)
 
-#define ONLY_THREAD if (threadIdx.x == 0)
+namespace UVMConsistency {
 
 #define UVMSPACE      volatile
+
 #define START         0
-#define ALERT_CPU     1
-#define ALERT_GPU     2
+#define GPU_START     1
+#define GPU_FINISH    2
+#define FINISH        3
 
-#define OUT
-
-#define NUM_BANK_ACCOUNTS 1
+#define NUM_SHARED 100
 
 typedef unsigned long long int ulli;
 
-class ManagedBankAccount {
-private:
-  static void *allocate(size_t size) {
-    void *ptr;
-    CUDA_CHECK(cudaMallocManaged(&ptr, size));
-    CUDA_CHECK(cudaDeviceSynchronize());
-    return ptr;
-  }
-public:
-
-  static void initialize_account(UVMSPACE ManagedBankAccount *account,
-                                unsigned long balance, unsigned long id) {
-    account->balance = balance;
-    account->account_id = id;
-    __sync_synchronize();
-  }
-
-  ManagedBankAccount() : balance(0), account_id(0) {}
+__global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished) {
+  // Wait for CPU
+  while (*finished != GPU_START);
   
-  void *operator new(size_t size) {
-    return allocate(size);
+  // Loop and execute writes on shared memory page - sequentially
+  for (int i = 0; i < NUM_SHARED; i++) {
+    arr[i] = 1;
+    __threadfence_system();
   }
+  
+  // GPU finished - CPU can finish
+  *finished = GPU_FINISH;
 
-  void *operator new[](size_t size) {
-    return allocate(size);
-  }
-
-  void operator delete[](void *ptr) {
-    CUDA_CHECK(cudaFree(ptr));
-  }
-
-  UVMSPACE unsigned long balance;
-  UVMSPACE unsigned long account_id;
-};
-
-
-
-/**
-    The kernel that performs the deposit
-*/
-
-__device__ void deposit_to_account(UVMSPACE ManagedBankAccount *bank_account, unsigned long deposit_amount,
-                                  volatile int *finished) {
-  // NOTE : need to sync this for the change to be seen in CPU (this is whats being tested)
-  atomicAdd((ulli *) &bank_account->balance, (ulli) deposit_amount);
-  *finished = ALERT_CPU;
-  // __threadfence_system(); // Writing finished GPU memory so CPU can see
-
-  // Wait for CPU to release
-  while (*finished != ALERT_GPU);
+  // Wait for CPU to finish
+  while (*finished != FINISH);
 }
 
-__global__ void bank_deposit(UVMSPACE void *bank_ptr, unsigned long account_id, unsigned long deposit_amount,
-                            volatile int *finished, UVMSPACE OUT int *status) {
-  UVMSPACE ManagedBankAccount *account = (ManagedBankAccount *) bank_ptr;
-  int account_index = 0;
-  for (; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
-    UVMSPACE unsigned long id = account->account_id;
-    if (id == account_id) {
-      break;
-    }
-  }
-  if (account_index >= NUM_BANK_ACCOUNTS) { // Account was not found (error handling...)
-    *status = -1;
-    // __threadfence_system();
-    return;
-  }
-  *status = 0;
-  // __threadfence_system();
-
-  deposit_to_account(account, deposit_amount, finished);
-}
-
-
-class ManagedBank {
-public:
-
-  ManagedBank() {
-    accounts = new ManagedBankAccount[NUM_BANK_ACCOUNTS];
-    for (int i = 0; i < NUM_BANK_ACCOUNTS; i++) {
-      unsigned long balance = (i + 1) * 1000;
-      unsigned long id = i + 1;
-      ManagedBankAccount::initialize_account(accounts + i, balance, id);
-    }
+class Consistency {
+private:	// Constructor & Destructor
+  Consistency() {
+    CUDA_CHECK(cudaMallocManaged(&arr, sizeof(int) * NUM_SHARED));
+    memset((void *) arr, 0, sizeof(int) * NUM_SHARED);
 
     CUDA_CHECK(cudaMallocManaged(&finished, sizeof(int)));
     memset((void *) finished, START, sizeof(int));
@@ -143,108 +58,91 @@ public:
     __sync_synchronize();
   }
 
-  ~ManagedBank() {
-    delete[] accounts;
+  ~Consistency() {
+    CUDA_CHECK(cudaFree((int *) arr));
     CUDA_CHECK(cudaFree((int *) finished));
   }
-
-  void start_transaction() {
-    *finished = START;
-    __sync_synchronize();
+  
+private:	// Logic
+  bool is_arr_full(UVMSPACE int *arr) {
+    int count = 0;
+    for (int i = 0; i < NUM_SHARED; i++) {
+      count += arr[i];
+    }
+    return count == NUM_SHARED;
   }
-
-  bool deposit(unsigned long account_id, unsigned long deposit_amount) {
-    UVMSPACE int *action_status;
-    CUDA_CHECK(cudaMallocManaged(&action_status, sizeof(int)));
-
-    // Call the kernel that uses the unified memory mapped page
-    bank_deposit<<<1,1>>>(accounts, account_id, deposit_amount, finished, action_status);
-
-    return true;
-  }
-
-  long check_balance(unsigned long account_id) {
-    long balance = -1;
-    UVMSPACE ManagedBankAccount *account = (ManagedBankAccount *) accounts;
-
-    for (int account_index = 0; account_index < NUM_BANK_ACCOUNTS; account_index++, account++) {
-      if (account->account_id == account_id) {
-        balance = account->balance;
-        break;
+  
+  void print_arr(UVMSPACE int *arr) {
+    printf("[");
+    for (int i = 0; i < NUM_SHARED; i++) {
+      printf("%d", arr[i]);
+      if (i < NUM_SHARED - 1) {
+        printf(",");
       }
     }
-
-    return balance;
+    printf("]\n");
   }
 
-  void wait_for_deposit() {
-    while(*finished != ALERT_CPU);
-    cout << " --- --- --- Deposit finished --- --- --- " << endl << endl;
-  }
-
-  void finish_deposit() {
-    *finished = ALERT_GPU; // check_balance means the CPU has its result
-    __sync_synchronize();
-    CUDA_CHECK(cudaDeviceSynchronize());  // Waiting for kernel to finish
-  }
-
-  void print() {
-    cout << "******  UVM Managed Bank  ******" << endl
-         << "\tAccounts : " << endl;
-    cout << "\t" << "Account id   |   Account balance" << endl;
-    UVMSPACE ManagedBankAccount *account = (ManagedBankAccount *) accounts;
-    for (int i = 0; i < NUM_BANK_ACCOUNTS; i++, account++) {
-      cout << "\t" << "      " << account->account_id << "      |      " << account->balance << endl;
+  bool check_consistency(UVMSPACE int *arr) {
+    // Read shared memory page - sequentially
+    for (int i = 0; i < NUM_SHARED - 1; i++) {
+      if (arr[i] < arr[i + 1]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
+        // print_arr(arr);
+        return true;
+      }
     }
-    cout << endl;
+    return false;
+  }
+  
+  void launch_task() {
+    // Start GPU task
+    GPU_UVM_Writer_Kernel<<<1,1>>>(arr, finished);
+
+    // GPU can start
+    *finished = GPU_START;
   }
 
-private:
-  UVMSPACE ManagedBankAccount *accounts;
-  volatile int *finished;
-};
+  void check_consistency() {
+    // While writes have not finished
+    while (!is_arr_full(arr)) {
+      // Check if an inconsistency exists in the array
+      if (check_consistency(arr)) {
+        ::std::cout << "Found Inconsistency !" << ::std::endl;
+        return;
+      }
+    }
+    ::std::cout << "No Consistency Found" << ::std::endl;
+  }
 
+  void finish_task() {
+    while (*finished != GPU_FINISH);
+    // Task is over
+    *finished = FINISH;
 
-/**
-    The class that represents the consistency model
-*/
-
-class UVMConsistency {
+    CUDA_CHECK(cudaDeviceSynchronize());
+  }
+    
 public:
-  static void strong_consistency_broken() {
-    ManagedBank bank;
-    bank.print();
+  static void start() {
+    Consistency consistency;
+    // Start kernel
+    consistency.launch_task();
 
-    // Getting initial balance
-    unsigned long balance = bank.check_balance(UVMConsistency::account_id);
+    // Check GPU consistency
+    consistency.check_consistency();
 
-    // Starting the transaction
-    bank.start_transaction();
-    // Depositing an amount - done in GPU thread
-    bank.deposit(UVMConsistency::account_id, UVMConsistency::deposit_amount);
-    
-    unsigned long new_balance = balance + UVMConsistency::deposit_amount;
-    // Wait for deposit to occur in GPU thread
-    bank.wait_for_deposit();
-    bank.print();
-    unsigned long second_balance = bank.check_balance(UVMConsistency::account_id);
-    
-    // Finish the transaction (let the GPU thread return)
-    bank.finish_deposit();
-    
-    // Check the result
-    if (second_balance != new_balance) {
-      cout << "Error! Strong Consistency is not adhered to!" << endl;
-    } else {
-      cout << "Success! Strong Consistency achieved!" << endl;
-    }
+    // Finish task for CPU and GPU
+    consistency.finish_task();
   }
 private:
-  static const unsigned long account_id = 1;
-  static const unsigned long deposit_amount = 1000;
+  UVMSPACE int *arr;
+  UVMSPACE int *finished;
 };
+
+} // UVMConsistency namespace
 
 int main() {
-  UVMConsistency::strong_consistency_broken();
+  UVMConsistency::Consistency::start();
+
   return 0;
 }
