@@ -1,0 +1,21 @@
+Sample output of 20 runs
+No Consistency Found
+No Consistency Found
+No Consistency Found
+No Consistency Found
+No Consistency Found
+Found Inconsistency !
+No Consistency Found
+No Consistency Found
+No Consistency Found
+No Consistency Found
+No Consistency Found
+Found Inconsistency !
+Found Inconsistency !
+No Consistency Found
+No Consistency Found
+No Consistency Found
+No Consistency Found
+No Consistency Found
+No Consistency Found
+No Consistency Found
