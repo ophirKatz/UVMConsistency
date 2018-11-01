@@ -21,12 +21,19 @@ namespace UVMConsistency {
 
 #define START         0
 #define GPU_START     1
-#define GPU_FINISH    2
-#define FINISH        3
+#define CPU_LOAD      2
+#define GPU_FINISH    4
+#define FINISH        5
 
 #define NUM_SHARED 100
 
 typedef unsigned long long int ulli;
+
+__device__ void write_fenced(UVMSPACE int *address, UVMSPACE int *finished) {
+  asm volatile ("add.release.sys.u32 [%0], 0, 1;"
+      : "=r"  (*address)
+  );
+}
 
 __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished) {
   // Wait for CPU
@@ -34,7 +41,10 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished)
   
   // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
+    // For Inconsistency
     arr[i] = 1;
+    // For Consistency
+    // write_fenced(&arr[i], finished);
   }
   
   // GPU finished - CPU can finish
