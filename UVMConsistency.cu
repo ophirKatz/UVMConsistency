@@ -37,7 +37,7 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished)
   for (int i = 0; i < NUM_SHARED; i++) {
     // For Inconsistency
     arr[i] = 1;
-    __threadfence_system();
+    // __threadfence_system();
   }
   
   // GPU finished - CPU can finish
