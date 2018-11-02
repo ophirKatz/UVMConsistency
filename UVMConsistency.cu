@@ -29,16 +29,6 @@ namespace UVMConsistency {
 
 typedef unsigned long long int ulli;
 
-__device__ void write_fenced(UVMSPACE int *address, UVMSPACE int *finished) {
-  // asm volatile ("add.u32 %0, 0, 1;"
-  //   : "=r"  (address[0])
-  // );
-
-  asm volatile ("st.volatile.u32 [%0], 1;"
-      : "=r"  (address[0])
-  );
-}
-
 __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished) {
   // Wait for CPU
   while (*finished != GPU_START);
@@ -48,11 +38,7 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished)
     // For Inconsistency
     arr[i] = 1;
     __threadfence_system();
-
-    // For Consistency
-    // write_fenced(arr + i, finished);
   }
-  __threadfence_system();
   
   // GPU finished - CPU can finish
   *finished = GPU_FINISH;
@@ -91,13 +77,9 @@ private:	// Logic
   bool check_consistency(UVMSPACE int *arr) {
     // Read shared memory page - sequentially
     for (int i = 0; i < NUM_SHARED - 1; i++) {
-#ifndef FIX
-      int v1 = arr[i];
-      int v2 = arr[i + 1];
-#else
       int v2 = arr[i + 1];
       int v1 = arr[i];
-#endif
+
       if (v1 < v2) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
         return true;
       }
