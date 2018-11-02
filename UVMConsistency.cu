@@ -97,7 +97,7 @@ private:	// Logic
 
   void check_consistency() {
     // While writes have not finished
-    while (!is_arr_full(arr)) {
+    while (!is_arr_full()) {
       // Check if an inconsistency exists in the array
       if (check_consistency(arr)) {
         ::std::cout << "Found Inconsistency !" << ::std::endl;
