@@ -30,10 +30,10 @@ namespace UVMConsistency {
 typedef unsigned long long int ulli;
 
 __device__ void write_fenced(UVMSPACE int *address, UVMSPACE int *finished) {
-  asm volatile ("add.u32 %0, %1, %2;"
+  asm volatile ("add.u32 %0, 0, 1; "
       : "=r"  (address[0])
-      : "r"   (0),
-        "r"   (1)
+      // : "r"   (0),
+      //   "r"   (1)
   );
 
   // asm volatile ("st.release.sys.u32 [%0], 1;"
@@ -92,25 +92,11 @@ private:	// Logic
     }
     return count == NUM_SHARED;
   }
-  
-  void print_arr(UVMSPACE int *arr) {
-    printf("[");
-    for (int i = 0; i < NUM_SHARED; i++) {
-      printf("%d", arr[i]);
-      if (i < NUM_SHARED - 1) {
-        printf(",");
-      }
-    }
-    printf("]\n");
-  }
 
   bool check_consistency(UVMSPACE int *arr) {
     // Read shared memory page - sequentially
     for (int i = 0; i < NUM_SHARED - 1; i++) {
-      int prev = arr[i];
-      int next = arr[i + 1];
-      if (prev < next) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
-        // print_arr(arr);
+      if (arr[i] < arr[i + 1]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
         return true;
       }
     }
