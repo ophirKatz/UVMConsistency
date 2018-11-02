@@ -37,10 +37,6 @@ __device__ void write_fenced(UVMSPACE int *address, UVMSPACE int *finished) {
   asm volatile ("st.volatile.u32 [%0], 1;"
       : "=r"  (address[0])
   );
-
-  asm volatile ("st.relaxed.sys.u32 [%0], 1;"
-      : "=r"  (address[0])
-  );
 }
 
 __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished) {
