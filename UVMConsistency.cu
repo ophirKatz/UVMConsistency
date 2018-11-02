@@ -35,7 +35,7 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished)
   
   // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
-    // For Inconsistency
+    // For Consistency Check
     arr[i] = 1;
     // __threadfence_system();
   }
@@ -77,8 +77,8 @@ private:	// Logic
   bool check_consistency(UVMSPACE int *arr) {
     // Read shared memory page - sequentially
     for (int i = 0; i < NUM_SHARED - 1; i++) {
-      int v2 = arr[i + 1];
-      int v1 = arr[i];
+      // int v2 = arr[i + 1];
+      // int v1 = arr[i];
 
       if (arr[i + 1] > arr[i]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
         return true;
