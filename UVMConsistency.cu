@@ -36,7 +36,7 @@ __device__ void write_fenced(UVMSPACE int *address, UVMSPACE int *finished) {
         "r"   (1)
   );
 
-  // asm volatile ("st.u32 [%0], 1;"
+  // asm volatile ("st.release.sys.u32 [%0], 1;"
   //     : "=r"  (address[0])
   // );
 }
@@ -47,12 +47,18 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished)
 
   printf("arr is at %p\n", arr);
   
+  int state = 1;
   // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
     // For Inconsistency
-    // arr[i] = 1;
+    while (state != 1);
+    state = 2;
+    arr[i] = 1;
+    __threadfence_system();
+    state = 1;
+
     // For Consistency
-    write_fenced(arr + i, finished);
+    // write_fenced(arr + i, finished);
   }
   
   // GPU finished - CPU can finish
