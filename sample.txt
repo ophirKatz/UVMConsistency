@@ -1,4 +1,4 @@
-Sample output of 20 runs
+Sample output of 20 runs (with inconsistency)
 No Consistency Found
 No Consistency Found
 No Consistency Found
