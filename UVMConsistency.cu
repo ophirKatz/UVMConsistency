@@ -74,7 +74,7 @@ private:	// Logic
     return count == NUM_SHARED;
   }
 
-  bool check_consistency() {
+  bool check_consistency(UVMSPACE int *arr) {
     // Read shared memory page - sequentially
     for (int i = 0; i < NUM_SHARED - 1; i++) {
       int v2 = arr[i + 1];
