@@ -38,13 +38,15 @@ __device__ void write_fenced(UVMSPACE int *address, UVMSPACE int *finished) {
 __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished) {
   // Wait for CPU
   while (*finished != GPU_START);
+
+  printf("arr is at %p\n", arr);
   
   // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
     // For Inconsistency
     // arr[i] = 1;
     // For Consistency
-    write_fenced(&arr[i], finished);
+    write_fenced(arr + i, finished);
   }
   
   // GPU finished - CPU can finish
