@@ -44,8 +44,6 @@ __device__ void write_fenced(UVMSPACE int *address, UVMSPACE int *finished) {
 __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished) {
   // Wait for CPU
   while (*finished != GPU_START);
-
-  printf("arr is at %p\n", arr);
   
   int state = 1;
   // Loop and execute writes on shared memory page - sequentially
@@ -109,7 +107,9 @@ private:	// Logic
   bool check_consistency(UVMSPACE int *arr) {
     // Read shared memory page - sequentially
     for (int i = 0; i < NUM_SHARED - 1; i++) {
-      if (arr[i] < arr[i + 1]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
+      int prev = arr[i];
+      int next = arr[i + 1];
+      if (prev < next) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
         // print_arr(arr);
         return true;
       }
