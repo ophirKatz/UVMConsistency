@@ -30,8 +30,8 @@ namespace UVMConsistency {
 typedef unsigned long long int ulli;
 
 __device__ void write_fenced(UVMSPACE int *address, UVMSPACE int *finished) {
-  asm volatile ("add.u32 %0, 0, 1; "
-      : "=r"  (address[0])
+  asm volatile ("add.u32 %0, 0, 1; membar.sys;"
+    : "=r"  (address[0])
       // : "r"   (0),
       //   "r"   (1)
   );
