@@ -37,25 +37,25 @@ __device__ void write_fenced(UVMSPACE int *address, UVMSPACE int *finished) {
   asm volatile ("st.volatile.u32 [%0], 1;"
       : "=r"  (address[0])
   );
+
+  asm volatile ("st.relaxed.sys.u32 [%0], 1;"
+      : "=r"  (address[0])
+  );
 }
 
 __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished) {
   // Wait for CPU
   while (*finished != GPU_START);
   
-  int state = 1;
   // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
     // For Inconsistency
-    while (state != 1);
-    state = 2;
     arr[i] = 1;
-    __threadfence_system();
-    state = 1;
 
     // For Consistency
     // write_fenced(arr + i, finished);
   }
+  __threadfence_system();
   
   // GPU finished - CPU can finish
   *finished = GPU_FINISH;
@@ -118,7 +118,7 @@ private:	// Logic
         return;
       }
     }
-    ::std::cout << "No Consistency Found" << ::std::endl;
+    ::std::cout << "No Inconsistency Found" << ::std::endl;
   }
 
   void finish_task() {
