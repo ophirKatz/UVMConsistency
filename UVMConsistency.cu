@@ -66,7 +66,7 @@ private:	// Constructor & Destructor
   }
   
 private:	// Logic
-  bool is_arr_full(UVMSPACE int *arr) {
+  bool is_arr_full() {
     int count = 0;
     for (int i = 0; i < NUM_SHARED; i++) {
       count += arr[i];
@@ -74,13 +74,13 @@ private:	// Logic
     return count == NUM_SHARED;
   }
 
-  bool check_consistency(UVMSPACE int *arr) {
+  bool check_consistency() {
     // Read shared memory page - sequentially
     for (int i = 0; i < NUM_SHARED - 1; i++) {
       int v2 = arr[i + 1];
       int v1 = arr[i];
 
-      if (v1 < v2) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
+      if (arr[i + 1] > arr[i]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
         return true;
       }
     }
