@@ -10,9 +10,10 @@
   }                                                                                       \
 } while (0)
 
-#define START     0
-#define START_GPU 1
-#define FINISH    2
+#define START         0
+#define START_GPU     1
+#define GPU_FINISHED  2
+#define FINISH        3
 
 
 __global__ void kernel(volatile int *x, volatile int *y, volatile int *finished) {
@@ -21,18 +22,22 @@ __global__ void kernel(volatile int *x, volatile int *y, volatile int *finished)
   *x = 1;
   *y = 1;
 
+  *finished = GPU_FINISHED;
+
   while (*finished != FINISH);
 }
 
 void consistency(volatile long *x, volatile long *y, volatile int *finished) {
   *finished = START_GPU;
-
+  
   long lv = (*x << 32) & *y;
   if (lv == 1L) {
     std::cout << "Found Inconsistency !" << std::endl;
   } else {
     std::cout << "No Inconsistency Found" << std::endl;
   }
+  
+  while (*finished != GPU_FINISHED);
 
   *finished = FINISH;
 }
