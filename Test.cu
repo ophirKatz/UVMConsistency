@@ -46,7 +46,7 @@ __device__ bool check_consistency(UVMSPACE int *arr) {
 
 __device__ void Reader_Thread(UVMSPACE int *arr, UVMSPACE int *finished) {
   // Wait for CPU
-  while (*finished != GPU_START_READ);
+  while (*finished < GPU_START_READ);
   
   while (!is_arr_full(arr)) {
     // Check if an inconsistency exists in the array
@@ -66,7 +66,7 @@ __device__ void Reader_Thread(UVMSPACE int *arr, UVMSPACE int *finished) {
 
 __device__ void Writer_Thread(UVMSPACE int *arr, UVMSPACE int *finished) {
   // Wait for CPU
-  while (*finished != GPU_START_WRITE);
+  while (*finished < GPU_START_WRITE);
   
   // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
@@ -153,7 +153,7 @@ private:	// Logic
   // }
 
   void finish_task() {
-    while (*finished != GPU_FINISH_WRITE && *finished != GPU_FINISH_READ);
+    while (*finished < GPU_FINISH_READ);
     // Task is over
     *finished = FINISH;
 
