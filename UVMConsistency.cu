@@ -1,11 +1,6 @@
 #include <stdio.h>
-#include <sys/time.h>
-#include <unistd.h>
 #include <assert.h>
-#include <string.h>
 #include <iostream>
-#include <math.h>
-#include <bitset>
 
 #define CUDA_CHECK(f) do {                                                                \
   cudaError_t e = f;                                                                      \
@@ -79,8 +74,10 @@ private:	// Logic
     for (int i = 0; i < NUM_SHARED - 1; i++) {
       // int v2 = arr[i + 1];
       // int v1 = arr[i];
+      long value = *((long *) (arr + i));
 
-      if (arr[i + 1] > arr[i]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
+      if (value > 0) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
+      // if (arr[i + 1] > arr[i]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
         return true;
       }
     }
