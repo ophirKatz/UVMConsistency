@@ -72,13 +72,9 @@ private:	// Logic
   bool check_consistency(UVMSPACE int *arr) {
     // Read shared memory page - sequentially
     for (int i = 0; i < NUM_SHARED - 1; i++) {
-      // int v2 = arr[i + 1];
-      // int v1 = arr[i];
       long value = *((long *) (arr + i));
-			
 
       if (value == 1L) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
-      // if (arr[i + 1] > arr[i]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
         return true;
       }
     }
