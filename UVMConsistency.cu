@@ -42,8 +42,6 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished)
   while (*finished != FINISH);
 }
 
-const long V = 1L << 32;
-
 class Consistency {
 private:	// Constructor & Destructor
   Consistency() {
@@ -73,12 +71,10 @@ private:	// Logic
 
   bool check_consistency(UVMSPACE long *arr) {
     // Read shared memory page - sequentially
-    for (int i = 0; i < NUM_SHARED - 1; i += 2) {
-      long value = arr[i];	// Will be [00000000;00000001] if arr[i] == 0 and arr[i + 1] == 1
-			if (value == V) {
-			::std::cout << "arr[i] = " << ((int *) &value)[0] << "arr[i + 1] = " << ((int *) &value)[1] << ::std::endl;
+    for (int i = 0; i < NUM_SHARED - 1; i++) {
+      long value = *((long *) (arr + i));
 
-      // if (value == V) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
+      if (value == 1L) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
         return true;
       }
     }
