@@ -32,7 +32,7 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished)
   for (int i = 0; i < NUM_SHARED; i++) {
     // For Consistency Check
     arr[i] = 1;
-    // __threadfence_system();
+     __threadfence_system();
   }
   
   // GPU finished - CPU can finish
@@ -41,6 +41,8 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *arr, UVMSPACE int *finished)
   // Wait for CPU to finish
   while (*finished != FINISH);
 }
+
+const long V = 1L << 32;
 
 class Consistency {
 private:	// Constructor & Destructor
@@ -69,16 +71,14 @@ private:	// Logic
     return count == NUM_SHARED;
   }
 
-  bool check_consistency(UVMSPACE int *arr) {
+  bool check_consistency(UVMSPACE long *arr) {
     // Read shared memory page - sequentially
-    for (int i = 0; i < NUM_SHARED - 1; i++) {
-      // int v2 = arr[i + 1];
-      // int v1 = arr[i];
-      long value = *((long *) (arr + i));
-			
+    for (int i = 0; i < NUM_SHARED - 1; i += 2) {
+      long value = arr[i];	// Will be [00000000;00000001] if arr[i] == 0 and arr[i + 1] == 1
+			if (value == V) {
+			::std::cout << "arr[i] = " << ((int *) &value)[0] << "arr[i + 1] = " << ((int *) &value)[1] << ::std::endl;
 
-      if (value == 1L) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
-      // if (arr[i + 1] > arr[i]) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
+      // if (value == V) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
         return true;
       }
     }
@@ -97,7 +97,7 @@ private:	// Logic
     // While writes have not finished
     while (!is_arr_full()) {
       // Check if an inconsistency exists in the array
-      if (check_consistency(arr)) {
+      if (check_consistency((long *) arr)) {
         ::std::cout << "Found Inconsistency !" << ::std::endl;
         return;
       }
