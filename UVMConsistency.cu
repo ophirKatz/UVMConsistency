@@ -24,16 +24,21 @@ namespace UVMConsistency {
 
 #define NUM_SHARED 100
 
-#define NUM_BLOCKS  100
+#define NUM_BLOCKS  1
 
 typedef unsigned long long int ulli;
 
 __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *kernel_arr, UVMSPACE int *kernel_finished) {
-  UVMSPACE int *arr = kernel_arr + blockIdx.x;
+	printf("[KERNEL]	global arr starting at %p\n", (void *) kernel_arr);
+  UVMSPACE int *arr = kernel_arr + blockIdx.x * NUM_SHARED;
+	printf("[KERNEL]	arr starting at %p\n", (void *) arr);
   UVMSPACE int *finished = kernel_finished + blockIdx.x;
+	printf("[KERNEL]	finished at %p\n", (void *) finished);
   // Wait for CPU
   while (*finished != GPU_START);
-  
+ 	
+	printf("kernel started\n");
+
   // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
     // For Consistency Check
@@ -43,6 +48,8 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *kernel_arr, UVMSPACE int *ke
   
   // GPU finished - CPU can finish
   *finished = GPU_FINISH;
+
+	printf("after kernel loop\n");
 
   // Wait for CPU to finish
   while (*finished != FINISH);
@@ -93,13 +100,15 @@ private:	// Logic
     GPU_UVM_Writer_Kernel<<<NUM_BLOCKS,1>>>(arr, finished);
   }
 
-  typedef void CheckConsistencyFunc(UVMSPACE int *arr, UVMSPACE int *finished);
   void check_consistency(UVMSPACE int *arr, UVMSPACE int *finished) const {
+		printf("[CPU THREAD]	arr starting at %p\n", (void *) arr);
+		printf("[CPU_THREAD]	finished at %p\n", (void *) finished);
     // GPU can start
     *finished = GPU_START;
 
     // While writes have not finished
     while (!is_arr_full((UVMSPACE long *) arr)) {
+			::std::cout << "cpu loop" << std::endl;
       // Check if an inconsistency exists in the array
       if (check_consistency_on_arr((long *) arr)) {
         ::std::cout << "Found Inconsistency !" << ::std::endl;
@@ -121,7 +130,7 @@ private:	// Logic
 public:
   static void handle_threads(const Consistency &consistency) {
     ::std::vector<std::thread> threads;
-    for (int i = 0; i < NUM_BLOCKS; ++i) {
+		for (int i = 0; i < NUM_BLOCKS; i++) {
       threads.push_back(
         ::std::thread(
           &Consistency::check_consistency,
@@ -131,6 +140,8 @@ public:
         )
       );
     }
+
+		::std::cout << "Inserted CPU threads" << ::std::endl;
 
     for (auto& thread : threads) {
       thread.join();
