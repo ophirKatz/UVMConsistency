@@ -29,15 +29,11 @@ namespace UVMConsistency {
 typedef unsigned long long int ulli;
 
 __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *kernel_arr, UVMSPACE int *kernel_finished) {
-	printf("[KERNEL]	global arr starting at %p\n", (void *) kernel_arr);
   UVMSPACE int *arr = kernel_arr + blockIdx.x * NUM_SHARED;
-	printf("[KERNEL]	arr starting at %p\n", (void *) arr);
   UVMSPACE int *finished = kernel_finished + blockIdx.x;
-	printf("[KERNEL]	finished at %p\n", (void *) finished);
+  
   // Wait for CPU
   while (*finished != GPU_START);
- 	
-	printf("kernel started\n");
 
   // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
@@ -48,8 +44,6 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *kernel_arr, UVMSPACE int *ke
   
   // GPU finished - CPU can finish
   *finished = GPU_FINISH;
-
-	printf("after kernel loop\n");
 
   // Wait for CPU to finish
   while (*finished != FINISH);
@@ -74,7 +68,7 @@ private:	// Constructor & Destructor
   }
   
 private:	// Logic
-  bool is_arr_full(UVMSPACE long *arr) const {
+  bool is_arr_full(UVMSPACE int *arr) const {
     int count = 0;
     for (int i = 0; i < NUM_SHARED; i++) {
       count += arr[i];
@@ -101,14 +95,11 @@ private:	// Logic
   }
 
   void check_consistency(UVMSPACE int *arr, UVMSPACE int *finished) const {
-		printf("[CPU THREAD]	arr starting at %p\n", (void *) arr);
-		printf("[CPU_THREAD]	finished at %p\n", (void *) finished);
     // GPU can start
     *finished = GPU_START;
 
     // While writes have not finished
-    while (!is_arr_full((UVMSPACE long *) arr)) {
-			::std::cout << "cpu loop" << std::endl;
+    while (!is_arr_full(arr)) {
       // Check if an inconsistency exists in the array
       if (check_consistency_on_arr((long *) arr)) {
         ::std::cout << "Found Inconsistency !" << ::std::endl;
@@ -140,8 +131,6 @@ public:
         )
       );
     }
-
-		::std::cout << "Inserted CPU threads" << ::std::endl;
 
     for (auto& thread : threads) {
       thread.join();
