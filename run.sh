@@ -5,7 +5,7 @@ nvcc -DFIX -g -G UVMConsistency.cu -o consistency.out -Wno-deprecated-gpu-target
 rm tmp.txt
 touch tmp.txt
 
-for i in $(seq 1 2000); do
+for i in $(seq 1 20000); do
 	if (( i % 10 == 0 )); then
 		echo "Iteration $i"
 	fi

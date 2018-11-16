@@ -71,10 +71,11 @@ private:	// Logic
 
   bool check_consistency(UVMSPACE long *arr) {
     // Read shared memory page - sequentially
+		static const long maxLong = 4294967296L;
     for (int i = 0; i < NUM_SHARED - 1; i++) {
       long value = *((long *) (arr + i));
 
-      if (value == 1L) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
+      if (value == maxLong) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
         return true;
       }
     }
