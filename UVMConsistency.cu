@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <iostream>
 
+#include "cuda_profiler_api.h"
+
 #define CUDA_CHECK(f) do {                                                                \
   cudaError_t e = f;                                                                      \
   if (e != cudaSuccess) {                                                                 \
@@ -22,9 +24,10 @@ namespace UVMConsistency {
 #define GPU_FINISH    4
 #define FINISH        5
 
-#define NUM_SHARED 100
+#define NUM_SHARED 10000
 
 #define NUM_BLOCKS  1
+#define SINGLE_THREAD
 
 typedef unsigned long long int ulli;
 
@@ -46,7 +49,7 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *kernel_arr, UVMSPACE int *ke
   *finished = GPU_FINISH;
 
   // Wait for CPU to finish
-  while (*finished != FINISH);
+  // while (*finished != FINISH);
 }
 
 class Consistency {
@@ -110,8 +113,9 @@ private:	// Logic
 
     // Wait for GPU
     while (*finished != GPU_FINISH);
+
     // Task is over
-    *finished = FINISH;
+    // *finished = FINISH;
   }
 
   void finish_task() {
@@ -138,15 +142,18 @@ public:
   }
   
   static void start() {
-    Consistency consistency;
+		Consistency consistency;
+
     // Start kernel
+		cudaProfilerStart();
     consistency.launch_task();
+		cudaProfilerStop();
 
     // Check GPU consistency
     handle_threads(consistency);
 
-    // Finish task for CPU and GPU
-    consistency.finish_task();
+		// Finish task for CPU and GPU
+		consistency.finish_task();
   }
 private:
   UVMSPACE int *arr;
@@ -156,7 +163,7 @@ private:
 } // UVMConsistency namespace
 
 int main() {
-  UVMConsistency::Consistency::start();
+	UVMConsistency::Consistency::start();
 
   return 0;
 }

@@ -1,0 +1,27 @@
+==25595== NVPROF is profiling process 25595, command: ./a.out
+==25595== Profiling application: ./a.out
+==25595== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+100.00%  287.75us         1  287.75us  287.75us  287.75us  kernel(int volatile *, int volatile *, int volatile *)
+
+==25595== Unified Memory profiling result:
+Device "GeForce GTX 1080 Ti (0)"
+   Count  Avg Size  Min Size  Max Size  Total Size  Total Time  Name
+       2  32.000KB  4.0000KB  60.000KB  64.00000KB  8.288000us  Host To Device
+       2  32.000KB  4.0000KB  60.000KB  64.00000KB  7.232000us  Device To Host
+       1         -         -         -           -  228.0650us  GPU Page fault groups
+Total CPU Page faults: 2
+
+==25595== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 99.50%  240.22ms         3  80.072ms  38.975us  240.11ms  cudaMallocManaged
+  0.19%  468.87us        91  5.1520us     233ns  201.08us  cuDeviceGetAttribute
+  0.11%  256.40us         3  85.467us  28.755us  160.60us  cudaFree
+  0.08%  199.95us         1  199.95us  199.95us  199.95us  cuDeviceTotalMem
+  0.06%  142.22us         1  142.22us  142.22us  142.22us  cudaLaunch
+  0.02%  55.576us         1  55.576us  55.576us  55.576us  cuDeviceGetName
+  0.02%  45.447us         1  45.447us  45.447us  45.447us  cudaDeviceSynchronize
+  0.01%  13.873us         3  4.6240us     704ns  11.396us  cudaSetupArgument
+  0.00%  8.6070us         1  8.6070us  8.6070us  8.6070us  cudaConfigureCall
+  0.00%  3.0220us         3  1.0070us     351ns  2.2230us  cuDeviceGetCount
+  0.00%  1.2830us         3     427ns     309ns     514ns  cuDeviceGet

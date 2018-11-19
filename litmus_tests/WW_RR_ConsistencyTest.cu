@@ -13,7 +13,7 @@ __global__ void kernel(volatile int *x, volatile int *y, volatile int *finished)
 
 	*finished = GPU_FINISHED;
 
-	while (*finished != FINISH);
+	// while (*finished != FINISH);
 }
 
 int main() {
@@ -36,7 +36,7 @@ int main() {
 	}
 
 	while (*finished != GPU_FINISHED);
-	*finished = FINISH;
+	// *finished = FINISH;
 
 	if (p == 1 && q == 0) {
 		printf("Success\n");
