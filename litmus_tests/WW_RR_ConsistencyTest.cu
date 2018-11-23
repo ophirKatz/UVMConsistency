@@ -1,15 +1,19 @@
 #include <stdio.h>
 
 
-#define GPU_START	1
+#define GPU_START			1
 #define GPU_FINISHED	2
-#define FINISH	3
+#define FINISH				3
+
+#define NUM_OF_TESTS	10000
 
 __global__ void kernel(volatile int *x, volatile int *y, volatile int *finished) {
 	while (*finished != GPU_START);
 
-	*x = 1;
-	*y = 1;
+	for (int i = 1; i <= NUM_OF_TESTS; i++) {
+		*x = i;
+		*y = i;
+	}
 
 	*finished = GPU_FINISHED;
 
@@ -30,19 +34,25 @@ int main() {
 	*finished = GPU_START;
 
 	int p = 0, q = 0;
-	while (p + q == 0) {
-		p = *y;
-		q = *x;
-	}
+	for (int i = 1; i <= NUM_OF_TESTS; i++) {
+		while ((p + q) == 0) {
+			p = *y;
+			q = *x;
+		}
 
+		// Perform test
+		if ((p == i) && (q == i - 1)) {
+			printf("Success\n");
+			return;
+		}
+		// Reset for next test
+		p = 0;
+		q = 0;
+	}
+	printf("Failure\n");
+		
 	while (*finished != GPU_FINISHED);
 	// *finished = FINISH;
-
-	if (p == 1 && q == 0) {
-		printf("Success\n");
-	} else {
-		printf("Failure\n");
-	}
 
 	cudaDeviceSynchronize();
 

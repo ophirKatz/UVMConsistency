@@ -24,10 +24,10 @@ namespace UVMConsistency {
 #define GPU_FINISH    4
 #define FINISH        5
 
-#define NUM_SHARED 10000
+#define PAGE_SIZE     64 * 1024          // This is the size of a memory page in the tested GPU system [64K]
+#define NUM_SHARED    2 * PAGE_SIZE    // So the array will span at-least 2 memory pages
 
 #define NUM_BLOCKS  1
-#define SINGLE_THREAD
 
 typedef unsigned long long int ulli;
 
@@ -113,9 +113,6 @@ private:	// Logic
 
     // Wait for GPU
     while (*finished != GPU_FINISH);
-
-    // Task is over
-    // *finished = FINISH;
   }
 
   void finish_task() {
