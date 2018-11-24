@@ -21,13 +21,17 @@ namespace UVMConsistency {
 #define START         0
 #define GPU_START     1
 #define CPU_LOAD      2
-#define GPU_FINISH    4
-#define FINISH        5
+#define GPU_HOLD      3
+#define CPU_HOLD      4
+#define GPU_HOLD_DONE      55
+#define CPU_HOLD_DONE      56
+#define GPU_FINISH    5
+#define FINISH        6
 
 #define PAGE_SIZE     64 * 1024          // This is the size of a memory page in the tested GPU system [64K]
-#define NUM_SHARED    2 * PAGE_SIZE    // So the array will span at-least 2 memory pages
+#define NUM_SHARED    2 * (PAGE_SIZE)    // So the array will span at-least 2 memory pages
 
-#define NUM_BLOCKS  100
+#define NUM_BLOCKS  1
 
 typedef unsigned long long int ulli;
 
@@ -40,9 +44,20 @@ __global__ void GPU_UVM_Writer_Kernel(UVMSPACE int *kernel_arr, UVMSPACE int *ke
 
   // Loop and execute writes on shared memory page - sequentially
   for (int i = 0; i < NUM_SHARED; i++) {
+		printf("[kernel]	i = %d\n", i);
     // For Consistency Check
-    arr[i] = 1;
-     __threadfence_system();
+		if (((arr + i + 1) - PAGE_SIZE == arr) || ((arr + i) - PAGE_SIZE == arr)) {
+			printf("[kernel]	CPU_HOLD\n");
+			*finished = CPU_HOLD;
+			while (*finished != GPU_HOLD) { printf("[kernel]	while finished != GPU_HOLD\n"); }
+		}
+
+    arr[i] = 1;	// Write
+
+    __threadfence_system();
+		if (((arr + i + 1) - PAGE_SIZE == arr) || ((arr + i) - PAGE_SIZE == arr)) {
+			while (*finished != CPU_HOLD_DONE);
+		}
   }
   
   // GPU finished - CPU can finish
@@ -83,11 +98,19 @@ private:	// Logic
     // Read shared memory page - sequentially
 		static const long maxLong = 4294967296L;
     for (int i = 0; i < NUM_SHARED - 1; i++) {
+			printf("[CPU]	i = %d\n", i);
+			if (((arr + i + 1) - PAGE_SIZE == arr) || ((arr + i) - PAGE_SIZE == arr)) {
+				while (*finished != CPU_HOLD) { printf("[CPU]	while finished != CPU_HOLD   finished = %d\n", *finished); }
+				*finished = GPU_HOLD;
+			}
       long value = *((long *) (arr + i));
 
       if (value == maxLong) {  // arr[i] == 0 and arr[i + 1] == 1  ==> Inconsistency
         return true;
       }
+			if (((arr + i + 1) - PAGE_SIZE == arr) || ((arr + i) - PAGE_SIZE == arr)) {
+				*finished = CPU_HOLD_DONE;
+			}
     }
     return false;
   }

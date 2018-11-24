@@ -5,19 +5,19 @@
 #define GPU_FINISHED	2
 #define FINISH				3
 
-#define NUM_OF_TESTS	10000
+#define NUM_OF_TESTS	100000
 
 __global__ void kernel(volatile int *x, volatile int *y, volatile int *finished) {
 	while (*finished != GPU_START);
 
 	for (int i = 1; i <= NUM_OF_TESTS; i++) {
 		*x = i;
+		__threadfence_system();
 		*y = i;
+		__threadfence_system();
 	}
 
 	*finished = GPU_FINISHED;
-
-	// while (*finished != FINISH);
 }
 
 int main() {
@@ -43,7 +43,7 @@ int main() {
 		// Perform test
 		if ((p == i) && (q == i - 1)) {
 			printf("Success\n");
-			return;
+			return 0;
 		}
 		// Reset for next test
 		p = 0;
@@ -52,7 +52,6 @@ int main() {
 	printf("Failure\n");
 		
 	while (*finished != GPU_FINISHED);
-	// *finished = FINISH;
 
 	cudaDeviceSynchronize();
 
